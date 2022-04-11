@@ -5,12 +5,13 @@ import re
 import sys
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
 
-from pyparsing import ParseException, ParseResults, ParserElement
+from pyparsing import Empty, ParseException, ParseResults, ParserElement
 
 __author__ = "Chase Hult"
 
 from exceptions import GOIFCompileError, GOIFException, GOIFRuntimeError
-from parser_pyp import cfg_into_stmt, cfg_into_stmt_eval, cfg_code, cfg_expr_var, cfg_go_stmt, cfg_goif_stmt, \
+from parser_pyp import SpecialValues, cfg_into_stmt, cfg_into_stmt_eval, cfg_code, cfg_expr_var, cfg_go_stmt, \
+    cfg_goif_stmt, \
     cfg_jump_stmt, cfg_line_id, cfg_ret_stmt, cfg_str, cfg_throw_stmt, cfg_unset_var
 
 
@@ -163,7 +164,10 @@ class GOIF:
             else:
                 expr, var = tokens
                 if self.debug:
-                    print(f"Storing {repr(expr)} into {var}.")
+                    if expr is SpecialValues.Empty:
+                        print(f"Unsetting {var}.")
+                    else:
+                        print(f"Storing {repr(expr)} into {var}.")
                 self.set_variable(var, expr)
                 self.cur_ln += 1
         else:
@@ -195,7 +199,10 @@ class GOIF:
         """Set a GOIF variable to the current namespace.
 
         This is used in INTO statements."""
-        if var == "STDERR":
+        if value is SpecialValues.Empty:
+            if var in self.vars:
+                self.vars.pop(var)
+        elif var == "STDERR":
             sys.stderr.write(str(value))
         elif var == "STDOUT":
             sys.stdout.write(str(value))

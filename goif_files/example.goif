@@ -235,7 +235,17 @@ JUMP FILE_IDENTIFIER:PRINT.HI
 % It has a few functions, and more might be added!  It's identifier is STD
 JUMP STD:LENGTH ("12345678")
 JUMP STD:TO_STRING (ret1)
-"\"12345678\" is " ^ ret1 ^ " characters long!" INTO STDOUT
+"\"12345678\" is " ^ ret1 ^ " characters long!\n" INTO STDOUT
+
+% Yoooo new feature!  This is going to be a long file.
+% If you remember, the @ operator is a special unary operator that takes in a variable and yeilds
+%  true if the variable is unset.
+% Expanding on that syntax, you can now unset a variable with an INTO statement.
+"a is " ^ (@a ? "not " : "") ^ "set.\n" INTO STDOUT
+3 INTO a
+"a is " ^ (@a ? "not " : "") ^ "set.\n" INTO STDOUT
+@ INTO a  % This is the syntax for unsetting a variable
+"a is " ^ (@a ? "not " : "") ^ "set.\n" INTO STDOUT
 
 % When RETURN is called from the base level, it ends the script sucessfully.  
 % This can also be done by just letting the script hit the last line.

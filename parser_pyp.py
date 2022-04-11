@@ -1,8 +1,10 @@
+from enum import Enum, auto
+
 from pyparsing import Char, Combine, Empty, Group, Keyword as _Keyword, LineEnd, Literal, OpAssoc, Opt, ParseResults, \
     ParserElement, Regex, StringEnd, Suppress, White, Word, alphanums, alphas, common, delimited_list, infix_notation, \
     nums, one_of
 
-from operator_exprs import Operate
+from operator_exprs import operate
 
 __author__ = "Chase Hult"
 
@@ -11,7 +13,8 @@ def Keyword(kw):
     return Suppress(_Keyword(kw, caseless=True))
 
 
-ParserElement.set_default_whitespace_chars(' \t')
+ParserElement.set_default_whitespace_chars(' \t')  # Newlines have meaning in this grammar
+ParserElement.enable_packrat()  # Enable memoization to speed up expression parsing
 
 KEYWORDS = [
     "INTO", "GO", "GOIF", "JUMP", "THROW", "RETURN", "HANDLE", "LOAD",
@@ -24,6 +27,10 @@ def not_keyword(tokens):
     return var.strip() not in KEYWORDS
 
 
+class SpecialValues(Enum):
+    Empty = auto()
+
+
 cfg_ws = Suppress(White())
 
 cfg_var = common.identifier
@@ -31,6 +38,7 @@ cfg_var.add_condition(not_keyword)
 cfg_expr_var = cfg_var.copy()
 cfg_unset_var = Combine(Suppress('@') + Char(alphas + '_') + Char(alphanums + '_')[...])
 
+cfg_empty = Literal("@").add_parse_action(lambda pr: SpecialValues.Empty)
 cfg_int = common.signed_integer
 cfg_str = Combine('"' + Word(nums) + '"')
 # This is true because of special string handling.  We need to add our parse action later.
@@ -43,13 +51,17 @@ def fold_expr(num=2):
         if len(expr) == 1:
             return expr[0]
         elif num == 1:
-            return Operate(*expr)
+            op, a1 = expr
+            return operate(op, a1)
         elif num == 2:
+            # Dyadic operators with equal presidence chain in PyParsing
+            #  so we need to do this recursively.
+            # ex. 1+2+3 -> [1, +, 2, +, 3] rather than [[1, +, 2], +, 3]
             a1, op, *a2 = expr
-            return Operate(op, a1, _fold(a2))
+            return operate(op, a1, _fold(a2))
         elif num == 3:
             a1, op, a2, _, a3 = expr
-            return Operate(op, a1, a2, a3)
+            return operate(op, a1, a2, a3)
 
     return lambda m: [_fold(m[0])]
 
@@ -92,7 +104,7 @@ cfg_goif_stmt = Keyword("GOIF") + cfg_line_id + cfg_ws + cfg_expr
 cfg_jump_stmt = Keyword("JUMP") + cfg_line_id + cfg_exprs + Group(cfg_handle_sbstmt)[...]
 cfg_throw_stmt = Keyword("THROW") + cfg_exception
 cfg_ret_stmt = Keyword("RETURN") + cfg_exprs
-cfg_into_stmt = cfg_expr + cfg_ws + Keyword("INTO") + cfg_var
+cfg_into_stmt = (cfg_expr | cfg_empty) + cfg_ws + Keyword("INTO") + cfg_var
 
 cfg_comment = Suppress(Literal("%") + Regex('[^\n]*'))
 
@@ -122,7 +134,7 @@ cfg_expr_eval = infix_notation(
 cfg_exprs_eval = Group(Suppress("(") + delimited_list(cfg_expr_eval, delim=Suppress(",")) + Suppress(")") | Empty())
 
 cfg_goif_stmt_eval = Keyword("GOIF") + cfg_line_id + cfg_ws + cfg_expr_eval
-cfg_into_stmt_eval = cfg_expr_eval + cfg_ws + Keyword("INTO") + cfg_var
+cfg_into_stmt_eval = (cfg_expr_eval | cfg_empty) + cfg_ws + Keyword("INTO") + cfg_var
 cfg_jump_stmt_eval = Keyword("JUMP") + cfg_line_id + cfg_exprs_eval + Group(cfg_handle_sbstmt)[...]
 cfg_ret_stmt_eval = Keyword("RETURN") + cfg_exprs_eval
 

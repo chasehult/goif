@@ -5,7 +5,7 @@ __author__ = "Kendyl Reisinger"
 from exceptions import GOIFException, GOIFRuntimeError
 
 
-def Operate(optr, *args):
+def operate(optr, *args):
     # addition
     if optr == '+':
         if isinstance(args[0], int) and isinstance(args[1], int):
