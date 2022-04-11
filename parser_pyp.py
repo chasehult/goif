@@ -14,7 +14,7 @@ def Keyword(kw):
 ParserElement.set_default_whitespace_chars(' \t')
 
 KEYWORDS = [
-    "INTO", "GO", "GOIF", "JUMP", "THROW", "RETURN", "HANDLE", "LOAD", "WITHNAME",
+    "INTO", "GO", "GOIF", "JUMP", "THROW", "RETURN", "HANDLE", "LOAD",
     "TRUE", "FALSE",
 ]
 
