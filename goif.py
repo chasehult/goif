@@ -82,6 +82,11 @@ class GOIF:
 
     def run(self, *args) -> None:
         self.setup(*args)
+        if self.debug:
+            print("Loaded Files:")
+            for fid, fp in self.fid_to_str.items():
+                print(f" {fid} - {fp}")
+            print()
         self._run()
 
     def _run(self):
@@ -120,7 +125,7 @@ class GOIF:
         """Evaluate one GOIF statement."""
         if self.debug:
             print(f"[{len(self.call_stack) + 1}]"
-                  f" [{self.cur_file}-{self.cur_ln}]"
+                  f" #{self.cur_file}{'-' + str(self.cur_ln) if self.cur_ln != float('inf') else ''}:"
                   f" {self.restore_string(line, keep_quotes=True)}")
 
         if (tokens := self.try_match(cfg_go_stmt, line)):
@@ -344,6 +349,7 @@ class GOIF:
             # Add all loads to our queue.
             self.files[fid] = {"MAIN": 1, "STD": 2}
             for fid_link, fp_link in links.items():
+                fp_link = os.path.join(fp_root, fp_link) if "/" not in fp_link else fp_link
                 if fp_link not in self.fn_map:
                     self.fn_map[fp_link] = idx
                     self.fid_to_str[idx] = os.path.basename(fp_link)
