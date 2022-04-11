@@ -92,7 +92,7 @@ cfg_goif_stmt = Keyword("GOIF") + cfg_line_id + cfg_ws + cfg_expr
 cfg_jump_stmt = Keyword("JUMP") + cfg_line_id + cfg_exprs + Group(cfg_handle_sbstmt)[...]
 cfg_throw_stmt = Keyword("THROW") + cfg_exception
 cfg_ret_stmt = Keyword("RETURN") + cfg_exprs
-cfg_asgn_stmt = cfg_expr + cfg_ws + Keyword("INTO") + cfg_var
+cfg_into_stmt = cfg_expr + cfg_ws + Keyword("INTO") + cfg_var
 
 cfg_comment = Suppress(Literal("%") + Regex('[^\n]*'))
 
@@ -122,13 +122,13 @@ cfg_expr_eval = infix_notation(
 cfg_exprs_eval = Group(Suppress("(") + delimited_list(cfg_expr_eval, delim=Suppress(",")) + Suppress(")") | Empty())
 
 cfg_goif_stmt_eval = Keyword("GOIF") + cfg_line_id + cfg_ws + cfg_expr_eval
-cfg_asgn_stmt_eval = cfg_expr_eval + cfg_ws + Keyword("INTO") + cfg_var
+cfg_into_stmt_eval = cfg_expr_eval + cfg_ws + Keyword("INTO") + cfg_var
 cfg_jump_stmt_eval = Keyword("JUMP") + cfg_line_id + cfg_exprs_eval + Group(cfg_handle_sbstmt)[...]
 cfg_ret_stmt_eval = Keyword("RETURN") + cfg_exprs_eval
 
 cfg_line = Opt(Group(
     cfg_go_stmt | cfg_goif_stmt_eval | cfg_jump_stmt_eval | cfg_throw_stmt |
-    cfg_ret_stmt_eval | cfg_label_stmt | cfg_asgn_stmt_eval | cfg_load_stmt)) + Opt(cfg_comment)
+    cfg_ret_stmt_eval | cfg_label_stmt | cfg_into_stmt_eval | cfg_load_stmt)) + Opt(cfg_comment)
 cfg_code = delimited_list(cfg_line, delim=LineEnd()) + StringEnd()
 
 

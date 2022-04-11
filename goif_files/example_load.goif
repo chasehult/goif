@@ -3,5 +3,7 @@
 % This code is only made to be loaded by example.goif to show off loading
 %%%
 
+LOAD example.goif EXAMPLE
+
 PRINT.HI:
 "Hey!\n" INTO STDOUT

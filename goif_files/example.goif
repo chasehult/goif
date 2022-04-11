@@ -209,7 +209,7 @@ GO BADFUNCTION.END
    badFunCTiON:
          % oh god this sucks
    %don't write code like this
-aRg1        ^"!"     into                    excLamATION
+aRg1        ^"!\n"     into                    excLamATION
                                     exclamation INTO    STDERR
 retuRN(exCLAmaTiON)
   bADfUNCTIOn.ENd:
@@ -223,11 +223,11 @@ JUMP BADFUNCTION ("Thank you for finishing the script")
 % The syntax for it is
 LOAD example_load.goif FILE_IDENTIFIER
 
-% You can then use labels in that file!
+% You can then use labels in that file! 
 JUMP FILE_IDENTIFIER:PRINT.HI
 
 % LOAD statements can go anywhere in the file and are loaded on compiletime.  At runtime, the line is 
-%  treated as a blank line.
+%  treated as a blank line.  Circular loads are okay, and you can load the same file multiple times.
 
 % This was built so we could have a standard library which is automatically loaded.
 % It has a few functions, and more might be added!  It's identifier is STD
