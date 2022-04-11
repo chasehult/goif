@@ -23,7 +23,7 @@ class Frame(NamedTuple):
 
 
 class GOIF:
-    def __init__(self, fp: Optional[str], *, debug_mode: bool = False):
+    def __init__(self, fp: Optional[str], *, debug_mode: bool = False, unsafe_jump: bool = False):
 
         self.cur_file: int = 0
         self.cur_ln: int = 0
@@ -39,6 +39,8 @@ class GOIF:
 
         self.debug = debug_mode
         self.fid_to_str = {1: os.path.basename(fp or "INPUT"), 2: 'STANDARD LIBRARY'}
+
+        self.unsafe_jump = unsafe_jump
 
         self.fn_map = {}
         self.compile(fp)
@@ -236,6 +238,9 @@ class GOIF:
         """Push the current frame onto the call stack.
 
         This is called in a JUMP statement"""
+        if len(self.call_stack) >= 255 and not self.unsafe_jump:
+            raise GOIFRuntimeError("Call stack overflow. Possible infinite loop?"
+                                   " Run with unsafe_jump (-j) if this is intended.")
         handlers = {exc: self.label_to_ln(ln) for exc, ln in handlers}
         self.call_stack.append(Frame(self.cur_ln, self.cur_file, self.vars.copy(), handlers))
         if not args:
@@ -427,7 +432,7 @@ class GOIF:
 
 if __name__ == "__main__":
     offset = 0
-    interactive = debug = False
+    interactive = debug = unsafe_jump = False
     if len(sys.argv) > 1 and sys.argv[1].startswith("-"):
         flags = sys.argv[1]
         offset = 1
@@ -435,19 +440,21 @@ if __name__ == "__main__":
             interactive = True
         if 'd' in flags:
             debug = True
+        if 'j' in flags:
+            unsafe_jump = True
 
     if not sys.argv[1 + offset:] and not interactive:
-        print("Usage:\n goif.py [-di] path/to/file.goif [arg ...]\n goif.py -i")
+        print("Usage:\n goif.py [-dij] path/to/file.goif [arg ...]\n goif.py -i[dj]")
         exit(1)
 
     if not interactive:
-        goif_code = GOIF(sys.argv[1 + offset], debug_mode=debug)
+        goif_code = GOIF(sys.argv[1 + offset], debug_mode=debug, unsafe_jump=unsafe_jump)
         goif_code.run(*sys.argv[2 + offset:])
     else:
         if len(sys.argv) < 3:
-            goif_code = GOIF(None, debug_mode=debug)
+            goif_code = GOIF(None, debug_mode=debug, unsafe_jump=unsafe_jump)
         else:
-            goif_code = GOIF(sys.argv[1 + offset], debug_mode=debug)
+            goif_code = GOIF(sys.argv[1 + offset], debug_mode=debug, unsafe_jump=unsafe_jump)
         goif_code.setup(*sys.argv[2 + offset:])
         cur_line = ""
         while cur_line.upper() != "RETURN":

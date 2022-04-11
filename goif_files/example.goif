@@ -139,6 +139,8 @@ ADD1.END:
 %  arg variables which are brought into a subroutine.
 % When you return from a subroutine, all variables are discarded and the old namespace is brought back, 
 %  but all ret variables from the subroutine are brought into the current namespace.
+% You can usually only go 255 levels deep without the program crashing, but you can disable that with
+%  the unsafe_jump (-j) command line flag. 
 
 "Is 3 + 1 equal to 4?\n" INTO STDOUT
 3 INTO arg1
