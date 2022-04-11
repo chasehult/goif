@@ -3,15 +3,13 @@
 import os.path
 import re
 import sys
-from collections import defaultdict
-from pathlib import Path
-from typing import Any, Dict, List, NamedTuple, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
 
 from pyparsing import ParseException, ParseResults, ParserElement
 
 __author__ = "Chase Hult"
 
-from exceptions import GOIFError, GOIFException
+from exceptions import GOIFCompileError, GOIFException, GOIFRuntimeError
 from parser_pyp import cfg_into_stmt, cfg_into_stmt_eval, cfg_code, cfg_expr_var, cfg_go_stmt, cfg_goif_stmt, \
     cfg_jump_stmt, cfg_line_id, cfg_ret_stmt, cfg_str, cfg_throw_stmt, cfg_unset_var
 
@@ -31,7 +29,8 @@ class GOIF:
         self.vars: Dict[str, Union[bool, str, int]] = {}
         self.call_stack: List[Frame] = []
 
-        self.files: Dict[int, Dict[str, int]] = {}  # Per-file file identifiers to file ids (ik identifier = id but i swear they're different)
+        self.files: Dict[int, Dict[
+            str, int]] = {}  # Per-file file identifiers to file ids (ik identifier = id but i swear they're different)
         self.lines: Dict[int, Dict[int, str]] = {}  # Per-file line numbers to statements
         self.labels: Dict[int, Dict[str, int]] = {}  # Per-file line labels to line numbers
 
@@ -51,14 +50,15 @@ class GOIF:
 
         This must be done before removing comments and labels, but after preserving strings
         """
+
         @cfg_line_id.set_parse_action
         def throw_on_bad_label(lines, _, pr):
             ln = len(lines.split("\n"))
             fname, lid = pr[0]
             if fname is not None:
                 if fname not in self.files[self.cur_file]:
-                    raise GOIFError(f"Invalid file: '{fname}'."
-                                    + self.get_current_state())
+                    raise GOIFCompileError(f"Invalid file: '{fname}'."
+                                           + self.get_current_state())
                 c_fid = self.files[self.cur_file][fname]
             else:
                 c_fid = self.cur_file
@@ -67,18 +67,18 @@ class GOIF:
                 return
 
             if lid not in self.labels[c_fid]:
-                raise GOIFError(f"Invalid label: '{fname + ':' if fname else ''}{lid}'."
-                                + self.get_current_state())
+                raise GOIFCompileError(f"Invalid label: '{fname + ':' if fname else ''}{lid}'."
+                                       + self.get_current_state())
 
         try:
             assert cfg_code.parse_string(code) is not None
-        except GOIFError as e:
+        except GOIFCompileError as e:
             raise e from None
-    
+
     def get_current_state(self) -> str:
         return f" (line {self.cur_ln if self.cur_ln != float('inf') else 'N/A'}" \
                f" file '{self.fid_to_str[self.cur_file]}')"
-    
+
     def run(self, *args) -> None:
         self.setup(*args)
         self._run()
@@ -96,9 +96,9 @@ class GOIF:
             line = self.lines[self.cur_file][self.cur_ln]
             try:
                 self.evaluate_statement(line)
-            except GOIFError as e:
-                raise GOIFError(f"{e.msg}"
-                                + self.get_current_state()) from None
+            except GOIFRuntimeError as e:
+                e.msg += self.get_current_state()
+                raise e from None
 
     def evaluate_input(self, line) -> None:
         line = self.preserve_strings(line)
@@ -110,9 +110,9 @@ class GOIF:
             else:
                 line = re.sub(r'\s+', ' ', line.split('%')[0].strip().upper())
                 self.evaluate_statement(line)
-        except GOIFError as e:
-            raise GOIFError(f"{e.msg}"
-                            + self.get_current_state()) from None
+        except GOIFRuntimeError as e:
+            e.msg += self.get_current_state()
+            raise e from None
         self._run()
 
     def evaluate_statement(self, line):
@@ -134,8 +134,8 @@ class GOIF:
             elif isinstance(tokens, ParseResults):
                 label, expr = tokens
                 if not isinstance(expr, bool):
-                    raise GOIFError(f"GOIF expression does not evaluate to bool."
-                                    + self.get_current_state())
+                    raise GOIFRuntimeError(f"GOIF expression does not evaluate to bool."
+                                           + self.get_current_state())
 
                 if expr:
                     self.cur_file, self.cur_ln = self.label_to_ln(label)
@@ -167,8 +167,8 @@ class GOIF:
                 self.set_variable(var, expr)
                 self.cur_ln += 1
         else:
-            raise GOIFError(f"Invalid statement: {repr(line)}."
-                            + self.get_current_state())
+            raise GOIFRuntimeError(f"Invalid statement: {repr(line)}."
+                                   + self.get_current_state())
 
         if self.debug and isinstance(tokens, GOIFException):
             exc = tokens
@@ -200,8 +200,8 @@ class GOIF:
         elif var == "STDOUT":
             sys.stdout.write(str(value))
         elif var in ("STDIN",):
-            raise GOIFError(f"You cannot read from {var}."
-                            + self.get_current_state())
+            raise GOIFRuntimeError(f"You cannot read from {var}."
+                                   + self.get_current_state())
         else:
             self.vars[var] = value
 
@@ -213,12 +213,12 @@ class GOIF:
         if var == "STDIN":
             return input()
         elif var in ("STDOUT", "STDERR"):
-            raise GOIFError(f"You cannot write to {var}."
-                            + self.get_current_state())
+            raise GOIFRuntimeError(f"You cannot write to {var}."
+                                   + self.get_current_state())
         elif var in self.vars:
             return self.vars[var]
-        raise GOIFError(f"Unknown variable {var}."
-                        + self.get_current_state())
+        raise GOIFRuntimeError(f"Unknown variable {var}."
+                               + self.get_current_state())
 
     def push_frame(self, args: List, handlers: List[ParseResults]) -> None:
         """Push the current frame onto the call stack.
@@ -260,7 +260,7 @@ class GOIF:
 
         This is called on some bad expressions or in an explicit THROW statement"""
         if exc == "ERROR":
-            raise GOIFError("Critical ERROR raised.")
+            raise GOIFRuntimeError("Critical ERROR raised.")
         if not self.call_stack:
             raise GOIFException(exc)
         frame = self.call_stack.pop()
@@ -352,10 +352,10 @@ class GOIF:
                 if line.endswith(':'):
                     label = line[:-1]
                     if label in f_labels:
-                        raise GOIFError(f"Label '{label}' appeared at least twice in file {self.fid_to_str[fid]}"
-                                        f" (lines {f_labels[label]} and {ln})")
+                        raise GOIFCompileError(f"Label '{label}' appeared at least twice in file {self.fid_to_str[fid]}"
+                                               f" (lines {f_labels[label]} and {ln})")
                     if not re.fullmatch(r'[\w.]+', label):
-                        raise GOIFError(f"Invalid label name in file {self.fid_to_str[idx]}: '{label}'")
+                        raise GOIFCompileError(f"Invalid label name in file {self.fid_to_str[idx]}: '{label}'")
                     f_labels[label] = ln
                     continue
                 if line:
@@ -395,7 +395,7 @@ class GOIF:
             files[match.group(2).upper()] = match.group(1)
             return ""
 
-        code = re.sub(r'^\s*LOAD\s+(\S+)\s+(\S+)\s*$', save_file, code, flags=re.I+re.M)
+        code = re.sub(r'^\s*LOAD\s+(\S+)\s+(\S+)\s*$', save_file, code, flags=re.I + re.M)
         return code, files
 
     def restore_string(self, line: Union[str, ParseResults], *, keep_quotes=False) -> str:
@@ -423,7 +423,7 @@ if __name__ == "__main__":
         if 'd' in flags:
             debug = True
 
-    if not sys.argv[1+offset:] and not interactive:
+    if not sys.argv[1 + offset:] and not interactive:
         print("Usage:\n goif.py [-di] path/to/file.goif [arg ...]\n goif.py -i")
         exit(1)
 
