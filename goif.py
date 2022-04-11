@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
+import os.path
 import re
 import sys
-from typing import Any, Dict, List, NamedTuple, Tuple, Union
+from collections import defaultdict
+from pathlib import Path
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
 
 from pyparsing import ParseException, ParseResults, ParserElement
 
@@ -11,100 +14,125 @@ __author__ = "Chase Hult"
 from exceptions import GOIFError, GOIFException
 from parser_pyp import cfg_asgn_stmt, cfg_asgn_stmt_eval, cfg_code, cfg_expr_var, cfg_go_stmt, cfg_goif_stmt, \
     cfg_jump_stmt, \
-    cfg_lbl_ln, cfg_ret_stmt, cfg_str, \
+    cfg_line_id, cfg_ret_stmt, cfg_str, \
     cfg_throw_stmt, cfg_unset_var
 
 
 class Frame(NamedTuple):
     cur_ln: int
-    cur_file: str
+    cur_file: int
     vars: Dict[str, Any]
-    handlers: Dict[str, int]
+    handlers: Dict[str, Tuple[int, int]]
 
 
 class GOIF:
-    def __init__(self, code, *, debug_mode=False):
+    def __init__(self, file, *, debug_mode=False):
+        self.files: Dict[int, Dict[str, int]] = defaultdict(dict)
         self.strs = {}
-        self.files = {}
-
         self.vars = {}
         self.call_stack = []
+
         self.debug = debug_mode
+        self.fid_to_str = {1: os.path.dirname(file), 2: 'STANDARD LIBRARY'}
 
-        code = self.preserve_strings(code)
+        self.lines = self.labels = {}
+        self.cur_file = None
 
-        self.lines, self.labels = self.get_lines(code)
+        self.get_lines(file)
 
-        self.cur_ln = self.labels['MAIN']
-        self.cur_file = "MAIN"
-
-        self.assert_code(code)
+        self.cur_ln = self.labels[1]['MAIN']
+        self.cur_file = 1
 
     def assert_code(self, code) -> None:
-        @cfg_lbl_ln.add_parse_action
+        @cfg_line_id.set_parse_action
         def throw_on_bad_label(lines, _, pr):
             ln = len(lines.split("\n"))
-            if pr[0] not in self.labels:
-                raise GOIFError(f"Invalid label on line {ln}: {pr[0]}")
+            fname, lid = pr[0]
+            if fname is not None:
+                if fname not in self.files[self.cur_file]:
+                    raise GOIFError(f"Invalid file on line {ln} file {self.fid_to_str[self.cur_file]}:"
+                                    f" {fname}")
+                c_fid = self.files[self.cur_file][fname]
+            else:
+                c_fid = self.cur_file
+
+            if re.fullmatch(r'[~^]\d+', lid):
+                return
+
+            if lid not in self.labels[c_fid]:
+                if fname is not None:
+                    raise GOIFError(f"Invalid label on line {ln} file {self.fid_to_str[self.cur_file]}:"
+                                    f" {fname}:{lid}")
+                else:
+                    raise GOIFError(f"Invalid label on line {ln} file {self.fid_to_str[self.cur_file]}:"
+                                    f" {lid}")
 
         try:
             assert cfg_code.parse_string(code) is not None
         except GOIFError as e:
-            raise GOIFError(e.msg) from None
+            raise e from None
 
     def run(self, *args) -> None:
         self.setup(*args)
         self._run()
 
     def _run(self):
-        while self.cur_ln <= max(self.lines, default=0):
-            if self.cur_ln not in self.lines:
+        while self.cur_ln <= max(self.lines[self.cur_file], default=0) or self.call_stack:
+            if self.cur_ln > max(self.lines[self.cur_file], default=0):
+                self.pop_frame()
+                continue
+
+            if self.cur_ln not in self.lines[self.cur_file]:
                 self.cur_ln += 1
                 continue
 
-            line = self.lines[self.cur_ln]
+            line = self.lines[self.cur_file][self.cur_ln]
             try:
                 self.evaluate_statement(line)
             except GOIFError as e:
-                raise GOIFError(f"Issue on line {self.cur_ln}. " + e.msg) from None
+                raise GOIFError(f"Issue on line {self.cur_ln} file {self.fid_to_str[self.cur_file]}."
+                                f" {e.msg}") from None
 
     def evaluate_input(self, line) -> None:
         line = self.preserve_strings(line)
         line = re.sub(r'\s+', ' ', line.split('%')[0].strip().upper())
-        self.cur_ln = max(self.lines, default=0)
+        self.cur_ln = float('inf')
         try:
             self.evaluate_statement(line)
         except GOIFError as e:
-            raise GOIFError(f"Issue on line {self.cur_ln}. " + e.msg) from None
+            raise GOIFError(f"Issue on line {self.cur_ln} file {self.fid_to_str[self.cur_file]}."
+                            f" {e.msg}") from None
         self._run()
 
     def evaluate_statement(self, line):
         if self.debug:
-            print(self.cur_ln, self.restore_string(line, keep_quotes=True))
+            print(f"[{len(self.call_stack) + 1}]"
+                  f" [{self.cur_file}-{self.cur_ln}]"
+                  f" {self.restore_string(line, keep_quotes=True)}")
 
         if (tokens := self.try_match(cfg_go_stmt, line)):
             # GO
             label, = tokens
-            self.cur_ln = self.label_to_ln(label)
+            self.cur_file, self.cur_ln = self.label_to_ln(label)
         elif (tokens := self.try_match(cfg_goif_stmt, line)):
             # GOIF
             if isinstance(tokens, GOIFException):
                 exc = tokens
                 self.throw_exc(exc.name)
-            else:
+            elif isinstance(tokens, ParseResults):
                 label, expr = tokens
                 if not isinstance(expr, bool):
                     raise GOIFError(f"GOIF expression does not evaluate to bool on line {self.cur_ln}")
 
                 if expr:
-                    self.cur_ln = self.label_to_ln(label)
+                    self.cur_file, self.cur_ln = self.label_to_ln(label)
                 else:
                     self.cur_ln += 1
         elif (tokens := self.try_match(cfg_jump_stmt, line)):
             # JUMP
             label, args, *handlers = tokens
             self.push_frame(args, handlers)
-            self.cur_ln = self.label_to_ln(label)
+            self.cur_file, self.cur_ln = self.label_to_ln(label)
         elif (tokens := self.try_match(cfg_throw_stmt, line)):
             # THROW
             exception, = tokens
@@ -113,8 +141,6 @@ class GOIF:
             # RETURN
             rets, = tokens
             self.pop_frame(rets)
-            # Don't continue to increment after JUMP.  Maybe just do +1 in the stack func?
-            self.cur_ln += 1
         elif self.try_match(cfg_asgn_stmt_eval, line):
             # INTO
             tokens = self.try_match(cfg_asgn_stmt, line)
@@ -135,14 +161,20 @@ class GOIF:
             if self.debug:
                 print(f"Failed expression.  Throwing {exc.name}")
 
-    def label_to_ln(self, label):
-        if label.startswith("^"):
-            return int(label[1:])
-        if label.startswith("~"):
-            return self.cur_ln + int(label[1:])
-        if label in self.labels:
-            return self.labels[label]
-        raise ValueError(f"Invalid label '{label}' on line {self.cur_ln}.")
+    def label_to_ln(self, label) -> Tuple[int, int]:
+        file_id, line_id = label
+        if file_id is None:
+            file = self.cur_file
+        else:
+            file = self.files[self.cur_file][file_id]
+
+        if line_id.startswith("^"):
+            return file, int(line_id[1:])
+        if line_id.startswith("~"):
+            return file, self.cur_ln + int(line_id[1:])
+        if line_id in self.labels[file]:
+            return file, self.labels[file][line_id]
+        raise ValueError(f"Invalid label '{line_id}' on line {self.cur_ln}.")
 
     def set_variable(self, var: str, value: Any) -> None:
         if var == "STDERR":
@@ -176,12 +208,13 @@ class GOIF:
             for c, arg in enumerate(args, 1):
                 self.vars[f'ARG{c}'] = arg
 
-    def pop_frame(self, rets) -> None:
+    def pop_frame(self, rets: Optional[ParseResults] = None) -> None:
         if not self.call_stack:
-            self.cur_ln = max(self.lines, default=0)
+            self.cur_ln = float('inf')
             return
         frame = self.call_stack.pop()
-        self.cur_ln = frame.cur_ln
+        self.cur_file = frame.cur_file
+        self.cur_ln = frame.cur_ln + 1
         cur_vars = frame.vars
         if not rets:
             for var, val in self.vars.copy().items():
@@ -199,12 +232,13 @@ class GOIF:
             raise GOIFException(exc)
         frame = self.call_stack.pop()
         if exc in frame.handlers:
-            self.cur_ln = frame.handlers[exc]
+            self.cur_file, self.cur_ln = frame.handlers[exc]
         else:
             self.throw_exc(exc)
 
     def setup(self, *args) -> None:
-        self.cur_ln = self.labels['MAIN']
+        self.cur_file = 1
+        self.cur_ln = self.labels[1]['MAIN']
         self.vars = {f"ARG{c + 1}": str(arg) for c, arg in enumerate(args)}
         cfg_str.set_parse_action(self.restore_string)
         cfg_expr_var.set_parse_action(self.get_variable)
@@ -219,28 +253,67 @@ class GOIF:
         except ParseException:
             return None
 
-    @staticmethod
-    def get_lines(code: str) -> Tuple[Dict[int, str], Dict[str, int]]:
-        lines = {}
-        labels = {}
-        for ln, line in enumerate(code.split('\n'), 1):
-            line = line.split('%')[0].strip().upper()
-            if line.endswith(':'):
-                label = line[:-1]
-                if label in labels:
-                    raise GOIFError(f"Label '{label}' appeared at least twice (lines {labels[label]} and {ln})")
-                if not re.fullmatch(r'[\w.]+', label):
-                    raise GOIFError(f"Invalid label name: '{label}'")
-                labels[label] = ln
+    def get_lines(self, root: str) -> None:
+        self.lines = {}
+        self.labels = {}
+        codes = {}
+
+        idx = 3
+
+        fp_root = os.path.dirname(Path(root))
+        std = os.path.dirname(__file__) + '/std.goif'
+        fn_map = {root: 1, std: 2}
+        files = {root, std}
+        seen = set()
+        while files:
+            f_lines = {}
+            f_labels = {}
+            fp = files.pop()
+            fid = fn_map[fp]
+            if "/" not in fp:
+                fp = os.path.join(fp_root, fp)
+            if fid in seen:
                 continue
-            if line:
-                line = re.sub(r'\s+', ' ', line)
-                lines[ln] = line
-        labels.setdefault('MAIN', 0)
-        return lines, labels
+            seen.add(fid)
+
+            code = self.preserve_strings(open(fp).read())
+            codes[fid] = code
+            code, links = self.get_files(code)
+
+            self.files[fid]["MAIN"] = 1
+            self.files[fid]["STD"] = 2
+            for fid_link, fp_link in links.items():
+                if fp_link not in fn_map:
+                    fn_map[fp_link] = idx
+                    self.fid_to_str[idx] = os.path.basename(fp_link)
+                    idx += 1
+                self.files[fid][fid_link] = fn_map[fp_link]
+                files.add(fp_link)
+
+            for ln, line in enumerate(code.split('\n'), 1):
+                line = line.split('%')[0].strip().upper()
+                if line.endswith(':'):
+                    label = line[:-1]
+                    if label in f_labels:
+                        raise GOIFError(f"Label '{label}' appeared at least twice (lines {f_labels[label]} and {ln})")
+                    if not re.fullmatch(r'[\w.]+', label):
+                        raise GOIFError(f"Invalid label name: '{label}'")
+                    f_labels[label] = ln
+                    continue
+                if line:
+                    line = re.sub(r'\s+', ' ', line)
+                    f_lines[ln] = line
+            f_labels.setdefault('MAIN', 1)
+            self.lines[fid] = f_lines
+            self.labels[fid] = f_labels
+
+
+        for fid, code in codes.items():
+            self.cur_file = fid
+            self.assert_code(code)
 
     def preserve_strings(self, code: str) -> str:
-        idx = max(self.strs, default=0)
+        idx = max(self.strs, default=0) + 1
 
         def replace_and_increment(match) -> str:
             nonlocal idx
@@ -249,14 +322,19 @@ class GOIF:
             idx += 1
             return f'"{idx - 1}"'
 
-        def save_file(match) -> str:
-            self.files[match.group(2).upper()] = match.group(1)
-            return ""
-
         # Honestly, this is probably regular.  I'm too lazy to write w/o lookbehinds though.
         code = re.sub(r'(?<!\\)"((?:[^"\n]|(?<=\\)")*)(?<!\\)"', replace_and_increment, code)
-        code = re.sub(r'^LOAD (.+) WITHNAME (.+)$', save_file, code, re.IGNORECASE)
         return code
+
+    def get_files(self, code: str) -> Tuple[str, Dict[str, str]]:
+        files = {}
+
+        def save_file(match) -> str:
+            files[match.group(2).upper()] = match.group(1)
+            return ""
+
+        code = re.sub(r'LOAD\s+(\S+)\s+(\S+)', save_file, code, re.I + re.M)
+        return code, files
 
     def restore_string(self, line: Union[str, ParseResults], *, keep_quotes=False) -> str:
         if isinstance(line, ParseResults):
@@ -283,14 +361,14 @@ if __name__ == "__main__":
             debug = True
 
     if not interactive:
-        goif_code = GOIF(open(sys.argv[1 + offset]).read(), debug_mode=debug)
-        goif_code.run(*sys.argv[2+offset:])
+        goif_code = GOIF(sys.argv[1 + offset], debug_mode=debug)
+        goif_code.run(*sys.argv[2 + offset:])
     else:
         if len(sys.argv) < 3:
             goif_code = GOIF('', debug_mode=debug)
         else:
-            goif_code = GOIF(open(sys.argv[1 + offset]).read(), debug_mode=debug)
-        goif_code.setup(*sys.argv[2+offset:])
+            goif_code = GOIF(sys.argv[1 + offset], debug_mode=debug)
+        goif_code.setup(*sys.argv[2 + offset:])
         cur_line = ""
         while cur_line.upper() != "RETURN":
             cur_line = input('>>> ')

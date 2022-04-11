@@ -76,18 +76,17 @@ cfg_rel_ln = Combine('~' + Opt('-') + Word(nums))
 cfg_lbl_ln = Word(alphanums + '._')
 cfg_line_no = cfg_abs_ln | cfg_rel_ln | cfg_lbl_ln
 
-cfg_file_id = Word(alphanums + '_')
-# cfg_line_id = Group(Opt(cfg_file_id + Suppress(":")).set_parse_action(lambda pr: pr or "MAIN") + cfg_line_no)
-cfg_line_id = cfg_line_no
+cfg_file_id = Word(alphanums + '_').add_condition(lambda pr: pr[0].upper() != "MAIN")
+cfg_line_id = Group(Opt(cfg_file_id + Suppress(":")).set_parse_action(lambda pr: pr or [None]) + cfg_line_no)
 
 cfg_exception = Word(alphanums + '_')
 
 cfg_handle_sbstmt = Keyword("HANDLE") + cfg_exception + cfg_ws + cfg_line_id
 
-cfg_goif_file = Word(alphanums + '_./ ')
+cfg_goif_file = Word(alphanums + '_./')
 
 cfg_label_stmt = Combine(cfg_lbl_ln + ':')
-cfg_load_stmt = Keyword("LOAD") + cfg_goif_file + Keyword("ASNAME") + cfg_file_id
+cfg_load_stmt = Keyword("LOAD") + cfg_goif_file + cfg_ws + cfg_file_id
 cfg_go_stmt = Keyword("GO") + cfg_line_id
 cfg_goif_stmt = Keyword("GOIF") + cfg_line_id + cfg_ws + cfg_expr
 cfg_jump_stmt = Keyword("JUMP") + cfg_line_id + cfg_exprs + Group(cfg_handle_sbstmt)[...]
@@ -96,7 +95,6 @@ cfg_ret_stmt = Keyword("RETURN") + cfg_exprs
 cfg_asgn_stmt = cfg_expr + cfg_ws + Keyword("INTO") + cfg_var
 
 cfg_comment = Suppress(Literal("%") + Regex('[^\n]*'))
-
 
 # Evaluation (Inert)
 cfg_var_eval = Combine(Char(alphas + '_') + Char(alphanums + '_')[...])
@@ -128,10 +126,9 @@ cfg_asgn_stmt_eval = cfg_expr_eval + cfg_ws + Keyword("INTO") + cfg_var
 cfg_jump_stmt_eval = Keyword("JUMP") + cfg_line_id + cfg_exprs_eval + Group(cfg_handle_sbstmt)[...]
 cfg_ret_stmt_eval = Keyword("RETURN") + cfg_exprs_eval
 
-
 cfg_line = Opt(Group(
     cfg_go_stmt | cfg_goif_stmt_eval | cfg_jump_stmt_eval | cfg_throw_stmt |
-    cfg_ret_stmt_eval | cfg_label_stmt | cfg_asgn_stmt_eval | cfg_file_id)) + Opt(cfg_comment)
+    cfg_ret_stmt_eval | cfg_label_stmt | cfg_asgn_stmt_eval | cfg_load_stmt)) + Opt(cfg_comment)
 cfg_code = delimited_list(cfg_line, delim=LineEnd()) + StringEnd()
 
 

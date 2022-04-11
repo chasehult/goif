@@ -3,157 +3,6 @@
 % This code calculates the greatest common denominator of two user-inputted numbers
 %%%
 
-LENGTH:
- %%%
- % This gives the length of a string.
- % args:
- % 1: STRING - the string to measure
- %
- % returns:
- % 1: NUMBER - the length of the input
- %%%
- GO LENGTH.START
-
- LENGTH.TRY_LENGTH:
-  %%%
-  % Try to index a string
-  % args:
-  % 1: STRING - the string to index into
-  % 2: INT - the index to try
-  % 
-  % throws:
-  % OP_FAIL - if the index is too large 
-  % (NOTE: you don't need to explicitly state OP_FAIL in the docstring unless it's expected behavior)
-  %%%
-  arg1 # arg2 INTO _
-  RETURN
- 
- LENGTH.START:
- 0 INTO arg2
- LENGTH.LOOP1:
-  arg2 + 1 INTO arg2
-  JUMP LENGTH.TRY_LENGTH HANDLE OP_FAIL LENGTH.LOOP1.END
-  GO LENGTH.LOOP1
- LENGTH.LOOP1.END:
- RETURN (arg2)
-
-
-TO_NUM:  
- %%%
- % This converts a string to a number.
- % args:
- % 1: STRING - the string to convert to a num 
- % 
- % returns:
- % 1: NUMBER - the number the string is
- %
- % throws:
- % BAD_STR - if the string is not numerical
- %%%
- 
- % This code is going to suck, but I'm going to write it anyway
- %  because I don't want a standard library that's not written in this language
- 
- JUMP LENGTH  % arg1 is already defined.  If we don't add parens, it grabs args from the namespace
- ret1 INTO length
- arg1 # 1 == "-" INTO neg
- neg ? 2 : 1 INTO idx
- 0 INTO ret1
- GOIF ~2 length >= idx  % Skip the next line if the arg isn't empty
-  THROW BAD_STR  % The input string was empty
- TO_NUM.LOOP1:
-  ret1 * 10 INTO ret1
-  TO_NUM.LOOP1.COND1:  % This label is never actually used. It's just here to look nice.
-  arg1 # idx INTO nth
-  GOIF ~3 nth != "0"  % Go three lines down if the idxth character of arg1 is not "0"
-   ret1 + 0 INTO ret1
-   GO TO_NUM.LOOP1.COND1.END
-  GOIF ~3 nth != "1"  % Go three lines down if the idxth character of arg1 is not "1"
-   ret1 + 1 INTO ret1
-   GO TO_NUM.LOOP1.COND1.END
-  GOIF ~3 nth != "2"
-   ret1 + 2 INTO ret1
-   GO TO_NUM.LOOP1.COND1.END
-  GOIF ~3 nth != "3"
-   ret1 + 3 INTO ret1
-   GO TO_NUM.LOOP1.COND1.END
-  GOIF ~3 nth != "4"
-   ret1 + 4 INTO ret1
-   GO TO_NUM.LOOP1.COND1.END
-  GOIF ~3 nth != "5"
-   ret1 + 5 INTO ret1
-   GO TO_NUM.LOOP1.COND1.END
-  GOIF ~3 nth != "6"
-   ret1 + 6 INTO ret1
-   GO TO_NUM.LOOP1.COND1.END
-  GOIF ~3 nth != "7"
-   ret1 + 7 INTO ret1
-   GO TO_NUM.LOOP1.COND1.END
-  GOIF ~3 nth != "8"
-   ret1 + 8 INTO ret1
-   GO TO_NUM.LOOP1.COND1.END
-  GOIF ~3 nth != "9"
-   ret1 + 9 INTO ret1
-   GO TO_NUM.LOOP1.COND1.END
-  THROW BAD_STR % This only runs if it was not a number from 0 to 9
-  TO_NUM.LOOP1.COND1.END:
-  idx + 1 INTO idx
-  GOIF TO_NUM.LOOP1 idx < length 
- RETURN (neg ? -ret1 : ret1)
-
-TO_STRING:
- GOIF ~3 arg1 != 0
-  "0" INTO ret1
-  RETURN
-
- "" INTO ret1
- "" INTO sign
-
- GOIF ~3 arg1 > 0
-   ret1 ^ "-" INTO sign
-   -arg1 INTO arg1
-
- TO_STRING.LOOP:
-  arg1 \ 10 INTO digit
-  GOIF ~3 digit != 0
-   "0" ^ ret1 INTO ret1
-   GO TO_STRING.LOOP.END
-  GOIF ~3 digit != 1
-   "1" ^ ret1 INTO ret1
-   GO TO_STRING.LOOP.END
-  GOIF ~3 digit != 2
-   "2" ^ ret1 INTO ret1
-   GO TO_STRING.LOOP.END
-  GOIF ~3 digit != 3
-   "3" ^ ret1 INTO ret1
-   GO TO_STRING.LOOP.END
-  GOIF ~3 digit != 4
-   "4" ^ ret1 INTO ret1
-   GO TO_STRING.LOOP.END
-  GOIF ~3 digit != 5
-   "5" ^ ret1 INTO ret1
-   GO TO_STRING.LOOP.END
-  GOIF ~3 digit != 6
-   "6" ^ ret1 INTO ret1
-   GO TO_STRING.LOOP.END
-  GOIF ~3 digit != 7
-   "7" ^ ret1 INTO ret1
-   GO TO_STRING.LOOP.END
-  GOIF ~3 digit != 8
-   "8" ^ ret1 INTO ret1
-   GO TO_STRING.LOOP.END
-  GOIF ~3 digit != 9
-   "9" ^ ret1 INTO ret1
-   GO TO_STRING.LOOP.END
-
- TO_STRING.LOOP.END:
-  arg1 / 10 INTO arg1
-  GOIF ~2 arg1 == 0
-   GO TO_STRING.LOOP
-  RETURN (sign ^ ret1)
-
-% Ideally, everything above this line would be a standard library label or whatever.
-
 GCD:
  %%%
  % This calculates the common denominator using Euclid's algorithm.
@@ -176,17 +25,17 @@ GCD:
 
 MAIN:
  GOIF MAIN.STARTNOARGS @arg2
-  JUMP TO_NUM (arg1)
+  JUMP STD:TO_NUM (arg1)
   ret1 INTO num1
 
-  JUMP TO_NUM (arg2)
+  JUMP STD:TO_NUM (arg2)
   ret1 INTO num2
 
   GO MAIN.ENDNOARGS
  MAIN.STARTNOARGS:
   MAIN.LOOP1:
    "Give the first number: " INTO STDOUT
-   JUMP TO_NUM (STDIN) HANDLE BAD_STR MAIN.LOOP1.HANDLE1.BAD_STR
+   JUMP STD:TO_NUM (STDIN) HANDLE BAD_STR MAIN.LOOP1.HANDLE1.BAD_STR
    ret1 INTO num1
    GO MAIN.LOOP1.END
    MAIN.LOOP1.HANDLE1.BAD_STR:
@@ -196,7 +45,7 @@ MAIN:
 
   MAIN.LOOP2:
    "Give the second number: " INTO STDOUT
-   JUMP TO_NUM (STDIN) HANDLE BAD_STR MAIN.LOOP2.HANDLE1.BAD_STR
+   JUMP STD:TO_NUM (STDIN) HANDLE BAD_STR MAIN.LOOP2.HANDLE1.BAD_STR
    ret1 INTO num2
    GO MAIN.LOOP2.END
    MAIN.LOOP2.HANDLE1.BAD_STR:
@@ -206,7 +55,7 @@ MAIN:
  MAIN.ENDNOARGS:
 
  JUMP GCD (num1, num2)
- JUMP TO_STRING (ret1)
+ JUMP STD:TO_STRING (ret1)
 
  "The Greatest Common Denominator is " ^ ret1 ^ ".\n" INTO STDOUT
  RETURN  % This pops off of an empty call stack, ending the program.

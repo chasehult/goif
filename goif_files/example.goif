@@ -218,6 +218,20 @@ JUMP BADFUNCTION ("Thank you for finishing the script")
 
 % Oh, random note. Command line arguments are the args of the base level routine.
 
+% Back to this file!  I added a new feature :)
+% You can load other files now!  
+% The syntax for it is
+LOAD example_load.goif FILE_IDENTIFIER
+
+% You can then use labels in that file!
+JUMP FILE_IDENTIFIER:PRINT.HI
+
+% This was built so we could have a standard library which is automatically loaded.
+% It has a few functions, and more might be added!  It's identifier is STD
+JUMP STD:LENGTH ("12345678")
+JUMP STD:TO_STRING (ret1)
+"\"12345678\" is " ^ ret1 ^ " characters long!" INTO STDOUT
+
 % When RETURN is called from the base level, it ends the script sucessfully.  
 % This can also be done by just letting the script hit the last line.
 RETURN  % We're done!

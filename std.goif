@@ -93,7 +93,7 @@ TO_NUM:
   THROW BAD_STR % This only runs if it was not a number from 0 to 9
   TO_NUM.LOOP1.COND1.END:
   idx + 1 INTO idx
-  GOIF TO_NUM.LOOP1 idx < length 
+  GOIF TO_NUM.LOOP1 idx <= length 
  RETURN (neg ? -ret1 : ret1)
 
 TO_STRING:

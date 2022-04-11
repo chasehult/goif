@@ -1,0 +1,7 @@
+%%%
+% example_load.goif
+% This code is only made to be loaded by example.goif to show off loading
+%%%
+
+PRINT.HI:
+"Hey!\n" INTO STDOUT
