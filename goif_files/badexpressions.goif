@@ -1,0 +1,42 @@
+%%%
+% badexpressions.goif
+% This is things that can go wrong with expressions.
+%%%
+
+
+% This code will compile!  Expressions aren't checked compiletime!
+
+"abc" + "def" INTO whatever  % This will fail!  You need to use ^ for concatenation.
+
+% Every single operator has specific types that are checked
+
+% @variable  % You cannot put a value or parenthetical expression here.
+% -int
+% int * int
+% int / int
+% int \ int
+% int + int
+% int - int
+% str # int
+% str ^ str
+% !bool
+% int < int
+% int <= int
+% T == T (the Ts must be the same type.  This is polymorphic)
+% T != T 
+% int >= int
+% int > int
+% bool & bool
+% bool | bool
+% bool ? T : T
+
+% I can't actually think of any other code here.
+
+% OH! Files.  Not quite expression related but close enough?
+
+STDOUT INTO var  % You cannot read from STDOUT or STDERR
+"whatever" INTO STDIN  % You cannot write to STDIN
+% These both fail at runtime.
+
+
+

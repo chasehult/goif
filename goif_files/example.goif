@@ -1,0 +1,223 @@
+%%%
+% example.goif
+% This code shows all the features of the GOIF language
+%%%
+
+% Hoo boy, I'm just gonna go down the list of things GOIF can do.
+% Hopefully this code is helpful to the people who actually have to write in it lol
+% This is a comment.  Obviously.  Any text after a % is ignored (not counting %s in strings)
+"%" INTO percent_string  % This is a legal line
+% That's an INTO statement by the way which is basically assignment
+
+% Expressions, variables, and INTO statements:
+% An INTO statement takes an expression which goes on the left and puts it into a 
+%  variable that's on the right
+% There's one exception though, and that's printing.  Instead of a variable on the right, you
+%  can right STDOUT or STDERR to write to system output or system error.
+percent_string INTO STDOUT  % This prints the percent symbol to system output.
+
+% Expressions are used in two places.  In INTO statements, and in GOIF statements.
+% The valid operators are:
+1 + 2 INTO three          %  + addition
+three - 1 INTO two        %  - subtraction
+two * 7 INTO fourteen     %  * multiplication
+fourteen / 3 INTO four    %  / integer division
+four \ 3 INTO one         %  \ modulus
+"!@#$" # one INTO exclam  %  # indexing (1-indexed)
+"Hi" ^ exclam INTO greet  %  ^ concatenation
+greet == "Hi!" INTO yes   % == equality
+!yes INTO no              %  ! logical not
+no & TRUE INTO no         %  & logical and
+no | TRUE INTO yes        %  | logical or
+yes ? 1 : 2 INTO one      % ?: ternary conditional
+ no ? 1 : 2 INTO two      % 
+1 < 3 INTO yes            %  < less than
+1 <= 3 INTO yes           % <= less than or equal to
+1 != 3 INTO yes           % != inequality
+1 >= 3 INTO no            % >= greater than or equal to
+1 > 3 INTO no             %  > greater than
+@nonexistant INTO yes     %  @ unset (TRUE if variable isn't set)
+@fourteen INTO no         % 
+-fourteen INTO neg14      %  - Oh yeah we also have negative it's technically different than subtraction
+"Oh, if you're running this you have to put input in right now: " INTO STDOUT
+STDIN INTO input          % technically treated as a variable, but STDIN gets string input from the user 
+
+% The order of operations is
+%  @
+%  - (but unary negative and not subtraction)
+%  * / \
+%  + - (this one is subtraction)
+%  #
+%  ^
+%  !
+%  < <= == != >= >
+%  & |
+%  ?:
+
+2 * (1 + 2) INTO six  % Parentheses are also valid
+
+% Uhh, that's it for expressions.  Onto labels.
+% Labels and GO statements:
+% A label is a point in code that can be jumped to.  It's basically just a glorified line number.
+LINE.61:  % This is line 61 (unless I change something and forget to update this)
+% Lines are 1 indexed so you'll be able see it on most text editors
+% Labels can have any character and .s in them and are defined with a :
+% They also have to be unique.  The interpreter will yell if they're not.
+% To jump to a label, you use a go statement, but I can't jump up here because it'll cause an
+%  infinite loop.
+% I'll just jump down instead
+GO AFTER.THE.ERROR
+THROW ERROR  % THROW throws an exception, but ERROR is a special exception.  We'll get to that later.
+             % Basically all you need to know is that ERROR will crash a program with no chance of recovery.
+AFTER.THE.ERROR:
+% We're safe!
+% Label names don't matter at all except for the exception of the "MAIN" label which is 
+%  where the program will start.
+% If a program doesn't have a MAIN label (like this one) it'll just start at the beginning.
+
+% GOIF statements:
+% This is the lifeblood of GOIF!  We couldn't do anything without this statement.
+% It's just go with an expression tacked on at the end.  If it's TRUE, we jump to the label; 
+%  otherwise, we just go to the next line.
+% This is how we do loops and conditionals.
+
+% Here's a conditional
+"Hit enter without typing anything: " INTO STDOUT  
+STDIN INTO input
+GOIF COND1.ELSE input == ""
+ "You typed something!\n" INTO STDOUT  % I like indenting by 1 space to show control flow
+ GO COND1.END  % You need this, otherwise it'll just do both.
+COND1.ELSE:
+ "You followed instructions!\n" INTO STDOUT
+COND1.END:
+
+% This can also be written with relative line numbers.
+"Do it again: " INTO STDOUT  
+STDIN INTO input
+GOIF ~3 input == ""  % This means "go 3 lines down"
+ "You typed something!\n" INTO STDOUT
+ GO ~2
+ "You followed instructions!\n" INTO STDOUT
+
+% Relative line numbers work too.
+GOIF ^105 input == ""  % This means "go to line 105"  Don't do this.  This is so bad.
+ "You typed something!\n" INTO STDOUT
+ GO ^106
+ "You followed instructions!\n" INTO STDOUT
+
+% While loop.  Let's count to 10!
+0 INTO counter
+LOOP1:
+ GOIF LOOP1.END counter > 10
+ counter + 1 INTO counter
+ counter INTO STDOUT
+ GO LOOP1
+LOOP1.END:
+
+GO ADD1.END  % It'd be bad if we actually went into this region.
+% It has a return statement and that's deadly when we're not in a subroutine
+
+% Subroutines and JUMP statments and also RETURN statements (this section gets 2 statements)
+ADD1:
+ %%%
+ % This adds one to the arg.
+ % args:
+ % 1: NUMBER - the input number
+ %
+ % returns:
+ % 1: NUMBER - the number + 1
+ %%%
+ arg1 + 1 INTO ret1
+ RETURN
+ADD1.END:
+
+% This label is meant to be used as a subroutine.  It can be imagined as a function.
+% There's nothing stopping us from GOing into it, but the RETURN in there would end the program.
+% There are two special argument names.  args and rets.  When a variable is in the form arg\d+, 
+%  it's an arg variable.  When it's in the form ret\d+, it's a ret variable. (\d+ means 1 or more numbers)
+% When you jump into a subroutine, all variables in the current namespace are put away except for 
+%  arg variables which are brought into a subroutine.
+% When you return from a subroutine, all variables are discarded and the old namespace is brought back, 
+%  but all ret variables from the subroutine are brought into the current namespace.
+
+"Is 3 + 1 equal to 4?\n" INTO STDOUT
+3 INTO arg1
+JUMP ADD1
+ret1 == 4 ? "Yes!\n" : "No!\n" INTO STDOUT
+
+% There's a fancy way to do this without setting an arg variable
+% It's called implicit arg syntax.  You put all the args in parentheses after the label
+"Is 5 + 1 equal to 7?\n" INTO STDOUT
+JUMP ADD1 (5)
+ret1 == 7 ? "Yes!\n" : "No!\n" INTO STDOUT
+
+% You can also do this with return variables!
+GO ADD.END
+ADD:
+ RETURN (arg1 + arg2)
+ADD.END:
+
+"Is 5 + 8 equal to 13?\n" INTO STDOUT
+JUMP ADD (5, 8)
+ret1 == 13 ? "Yes!\n" : "No!\n" INTO STDOUT
+
+% There's one more use for RETURN that we'll get to at the VERY end of the file.
+
+% Exceptions and THROW statements.
+GO DIV.END
+DIV:
+ %%%
+ % Divide two numbers perfectly.
+ % args:
+ % 1: NUMBER - the first number
+ % 2: NUMBER - the second number
+ %
+ % returns:
+ % 1: NUMBER - the quotient
+ %
+ % throws:
+ % OP_FAIL - if you divide by zero 
+ % NO_DIV - if there's no perfect integer result
+ %%%
+ GOIF ~2 arg1 \ arg2 == 0
+  THROW NO_DIV
+ RETURN (arg1 / arg2)
+DIV.END:
+
+% You can add a number of handlers to a JUMP statement
+JUMP DIV (5, 3) HANDLE NO_DIV HANDLE1.NODIV HANDLE OP_FAIL HANDLE1.OPFAIL
+GO HANDLE1.END
+HANDLE1.NODIV:
+ "5 is not perfectly divisible by 3.\n" INTO STDOUT
+ GO HANDLE1.END
+HANDLE1.OPFAIL:
+ "3 is zero.\n" INTO STDOUT
+HANDLE1.END:
+
+% OP_FAIL is a special exception that's called when:
+%  1. You divide by zero
+%  2. You modulo by zero
+%  3. Your string index is out of bounds
+
+% The other special exception is ERROR.  This cannot be handled.
+% If an exception is not handled, it'll continue breaking out of the current subroutine until it is.
+% If an exception isn't handled and we're on the base level, the entire program fails.
+
+% That's everything!  One thing is that capitalization and indentation don't matter at all.
+GO BADFUNCTION.END
+
+   badFunCTiON:
+         % oh god this sucks
+   %don't write code like this
+aRg1        ^"!"     into                    excLamATION
+                                    exclamation INTO    STDERR
+retuRN(exCLAmaTiON)
+  bADfUNCTIOn.ENd:
+
+JUMP BADFUNCTION ("Thank you for finishing the script")
+
+% Oh, random note. Command line arguments are the args of the base level routine.
+
+% When RETURN is called from the base level, it ends the script sucessfully.  
+% This can also be done by just letting the script hit the last line.
+RETURN  % We're done!

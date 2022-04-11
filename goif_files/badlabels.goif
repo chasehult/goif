@@ -1,0 +1,25 @@
+%%%
+% badlabels.goif
+% This is things that can go wrong with labels.
+%%%
+
+SAME.NAME:
+SAME.NAME:  % This script won't even load.  This is very illegal.
+
+GO NON.EXISTANT  % This will also fail on compile.
+GOIF NON.EXISTANT TRUE  % This one too.
+
+SPACES IN LABEL:  % Invalid label names also fail on compile
+
+GO ^-1  % This one actually isn't bad.  Negative line numbers are allowed.
+GO ~0  % Technically allowed!  Infinite loop though.
+
+
+INF.LOOP:
+GO INF.LOOP  % Also legal!  Infinite loop.
+
+
+SUBROUTINE:
+ RETURN  % If the main is before the subroutine, it won't get skipped and the return will end the program.
+
+GO SUBROUTINE  % This will do the same, though sometimes you might want to do this!

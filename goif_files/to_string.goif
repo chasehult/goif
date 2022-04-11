@@ -1,0 +1,56 @@
+TO_STRING:
+ GOIF ~3 arg1 != 0
+  "0" INTO ret1
+  RETURN
+
+ "" INTO ret1
+ "" INTO sign
+
+ GOIF ~3 arg1 > 0
+   ret1 ^ "-" INTO sign
+   -arg1 INTO arg1
+
+ TO_STRING.LOOP:
+  arg1 \ 10 INTO digit
+  GOIF ~3 digit != 0
+   "0" ^ ret1 INTO ret1
+   GO TO_STRING.LOOP.END
+  GOIF ~3 digit != 1
+   "1" ^ ret1 INTO ret1
+   GO TO_STRING.LOOP.END
+  GOIF ~3 digit != 2
+   "2" ^ ret1 INTO ret1
+   GO TO_STRING.LOOP.END
+  GOIF ~3 digit != 3
+   "3" ^ ret1 INTO ret1
+   GO TO_STRING.LOOP.END
+  GOIF ~3 digit != 4
+   "4" ^ ret1 INTO ret1
+   GO TO_STRING.LOOP.END
+  GOIF ~3 digit != 5
+   "5" ^ ret1 INTO ret1
+   GO TO_STRING.LOOP.END
+  GOIF ~3 digit != 6
+   "6" ^ ret1 INTO ret1
+   GO TO_STRING.LOOP.END
+  GOIF ~3 digit != 7
+   "7" ^ ret1 INTO ret1
+   GO TO_STRING.LOOP.END
+  GOIF ~3 digit != 8
+   "8" ^ ret1 INTO ret1
+   GO TO_STRING.LOOP.END
+  GOIF ~3 digit != 9
+   "9" ^ ret1 INTO ret1
+   GO TO_STRING.LOOP.END
+
+ TO_STRING.LOOP.END:
+  arg1 / 10 INTO arg1
+  GOIF ~2 arg1 == 0
+   GO TO_STRING.LOOP
+  sign ^ ret1 INTO ret1
+  RETURN
+
+MAIN:
+ -1234 INTO arg1
+ JUMP TO_STRING
+ ret1 INTO STDOUT
