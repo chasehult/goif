@@ -226,6 +226,9 @@ LOAD example_load.goif FILE_IDENTIFIER
 % You can then use labels in that file!
 JUMP FILE_IDENTIFIER:PRINT.HI
 
+% LOAD statements can go anywhere in the file and are loaded on compiletime.  At runtime, the line is 
+%  treated as a blank line.
+
 % This was built so we could have a standard library which is automatically loaded.
 % It has a few functions, and more might be added!  It's identifier is STD
 JUMP STD:LENGTH ("12345678")
