@@ -1,6 +1,11 @@
 %%%
 % gcd.goif
-% This code calculates the greatest common denominator of two user-inputted numbers
+% This code calculates the greatest common denominator of two user-inputted numbers.
+%
+% This code is more basic than I expected because I wrote it before I wrote the language. The
+%  first version of this program had the standard library as part of it which made it much
+%  longer; therefore, this valid program is accompanied by the standard library at 
+%  <https://github.com/chasehult/goif/blob/master/std.goif>.
 %%%
 
 GCD:
@@ -21,10 +26,10 @@ GCD:
   temp \ arg2 INTO arg2 
   GO GCD.LOOP1
  GCD.LOOP1.END:
- RETURN (arg1)
+ RETURN (arg1 >= 0 ? arg1 : -arg1)  % GCD is always positive
 
 MAIN:
- GOIF MAIN.STARTNOARGS @arg2
+ GOIF MAIN.STARTNOARGS @arg2  % Allow args to be passed in via command line or STDIN
   JUMP STD:TO_NUM (arg1)
   ret1 INTO num1
 
@@ -57,5 +62,5 @@ MAIN:
  JUMP GCD (num1, num2)
  JUMP STD:TO_STRING (ret1)
 
- "The Greatest Common Denominator is " ^ ret1 ^ ".\n" INTO STDOUT
- RETURN  % This pops off of an empty call stack, ending the program.
+ "The Greatest Common Denominator is " ^ ret1 ^ "." INTO STDOUT
+ RETURN

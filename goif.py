@@ -306,8 +306,10 @@ class GOIF:
 
         seen = set(self.fn_map.values())
         self.fn_map.update({root: idx - 1, std: 2})
-        files = {root, std}
+        if idx == 2:  # Don't overwrite the standard library
+            idx += 1
 
+        files = {root, std}
         while files:
             fp = files.pop()
             fid = self.fn_map[fp]
