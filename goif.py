@@ -167,7 +167,7 @@ class GOIF:
                 self.set_variable(var, expr)
                 self.cur_ln += 1
         else:
-            raise GOIFError(f"Invalid statement: '{repr(line)}'."
+            raise GOIFError(f"Invalid statement: {repr(line)}."
                             + self.get_current_state())
 
         if self.debug and isinstance(tokens, GOIFException):
@@ -377,7 +377,7 @@ class GOIF:
         def replace_and_increment(match) -> str:
             nonlocal idx
             self.strs[idx] = match.group(1).replace('\\n', '\n').replace('\\t', '\t') \
-                .replace('\\"', '"').replace('\\b', '')
+                .replace('\\"', '"').replace('\\b', '').replace('\\0', '\0')
             idx += 1
             return f'"{idx - 1}"'
 
@@ -437,4 +437,5 @@ if __name__ == "__main__":
         cur_line = ""
         while cur_line.upper() != "RETURN":
             cur_line = input('>>> ')
-            goif_code.evaluate_input(cur_line)
+            if cur_line:
+                goif_code.evaluate_input(cur_line)
