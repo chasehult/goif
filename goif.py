@@ -31,7 +31,7 @@ class GOIF:
         self.vars: Dict[str, Union[bool, str, int]] = {}
         self.call_stack: List[Frame] = []
 
-        self.files: Dict[int, Dict[str, int]] = {}  # Per-file file identifiers to file ids
+        self.files: Dict[int, Dict[str, int]] = {}  # Per-file file identifiers to file ids (ik identifier = id but i swear they're different)
         self.lines: Dict[int, Dict[int, str]] = {}  # Per-file line numbers to statements
         self.labels: Dict[int, Dict[str, int]] = {}  # Per-file line labels to line numbers
 

@@ -228,6 +228,8 @@ JUMP FILE_IDENTIFIER:PRINT.HI
 
 % LOAD statements can go anywhere in the file and are loaded on compiletime.  At runtime, the line is 
 %  treated as a blank line.  Circular loads are okay, and you can load the same file multiple times.
+% You can also use "LOAD /absolute/path/to/file.goif FILE_IDENTIFIER" but I don't know how your 
+%  filesystem is set up so I can't show that here.  I promise it's possible though you can totally try it.  
 
 % This was built so we could have a standard library which is automatically loaded.
 % It has a few functions, and more might be added!  It's identifier is STD
