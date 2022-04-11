@@ -31,7 +31,7 @@ class GOIF:
         self.call_stack = []
 
         self.debug = debug_mode
-        self.fid_to_str = {1: os.path.dirname(file), 2: 'STANDARD LIBRARY'}
+        self.fid_to_str = {1: os.path.basename(file), 2: 'STANDARD LIBRARY'}
 
         self.lines = self.labels = {}
         self.cur_file = None
@@ -49,7 +49,7 @@ class GOIF:
             if fname is not None:
                 if fname not in self.files[self.cur_file]:
                     raise GOIFError(f"Invalid file: '{fname}'."
-                                    f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
+                                    + self.get_current_state())
                 c_fid = self.files[self.cur_file][fname]
             else:
                 c_fid = self.cur_file
@@ -59,13 +59,16 @@ class GOIF:
 
             if lid not in self.labels[c_fid]:
                 raise GOIFError(f"Invalid label: '{fname + ':' if fname else ''}{lid}'."
-                                f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
+                                + self.get_current_state())
 
         try:
             assert cfg_code.parse_string(code) is not None
         except GOIFError as e:
             raise e from None
-
+    
+    def get_current_state(self) -> str:
+        return f" (line {self.cur_ln} file '{self.fid_to_str[self.cur_file]}')"
+    
     def run(self, *args) -> None:
         self.setup(*args)
         self._run()
@@ -85,7 +88,7 @@ class GOIF:
                 self.evaluate_statement(line)
             except GOIFError as e:
                 raise GOIFError(f"{e.msg}"
-                                f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})") from None
+                                + self.get_current_state()) from None
 
     def evaluate_input(self, line) -> None:
         line = self.preserve_strings(line)
@@ -95,7 +98,7 @@ class GOIF:
             self.evaluate_statement(line)
         except GOIFError as e:
             raise GOIFError(f"{e.msg}"
-                            f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})") from None
+                            + self.get_current_state()) from None
         self._run()
 
     def evaluate_statement(self, line):
@@ -117,7 +120,7 @@ class GOIF:
                 label, expr = tokens
                 if not isinstance(expr, bool):
                     raise GOIFError(f"GOIF expression does not evaluate to bool."
-                                    f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
+                                    + self.get_current_state())
 
                 if expr:
                     self.cur_file, self.cur_ln = self.label_to_ln(label)
@@ -150,7 +153,7 @@ class GOIF:
                 self.cur_ln += 1
         else:
             raise GOIFError(f"Invalid statement: '{repr(line)}'."
-                            f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
+                            + self.get_current_state())
 
         if isinstance(tokens, GOIFException):
             exc = tokens
@@ -171,7 +174,7 @@ class GOIF:
         if line_id in self.labels[file]:
             return file, self.labels[file][line_id]
         raise ValueError(f"Invalid label '{line_id}'."
-                         f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
+                         + self.get_current_state())
 
     def set_variable(self, var: str, value: Any) -> None:
         if var == "STDERR":
@@ -180,7 +183,7 @@ class GOIF:
             sys.stdout.write(str(value))
         elif var in ("STDIN",):
             raise GOIFError(f"You cannot read from {var}."
-                            f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
+                            + self.get_current_state())
         else:
             self.vars[var] = value
 
@@ -190,11 +193,11 @@ class GOIF:
             return input()
         elif var in ("STDOUT", "STDERR"):
             raise GOIFError(f"You cannot write to {var}."
-                            f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
+                            + self.get_current_state())
         elif var in self.vars:
             return self.vars[var]
         raise GOIFError(f"Unknown variable {var}."
-                        f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
+                        + self.get_current_state())
 
     def push_frame(self, args: List, handlers: List[ParseResults]) -> None:
         handlers = {exc: self.label_to_ln(ln) for exc, ln in handlers}
@@ -352,13 +355,17 @@ class GOIF:
 if __name__ == "__main__":
     offset = 0
     interactive = debug = False
-    if sys.argv[1].startswith("-"):
+    if len(sys.argv) > 1 and sys.argv[1].startswith("-"):
         flags = sys.argv[1]
         offset = 1
         if 'i' in flags:
             interactive = True
         if 'd' in flags:
             debug = True
+
+    if not sys.argv[1+offset:]:
+        print("Usage:\n goif.py [-di] path/to/file.goif [arg ...]")
+        exit(1)
 
     if not interactive:
         goif_code = GOIF(sys.argv[1 + offset], debug_mode=debug)
