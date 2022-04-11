@@ -13,9 +13,7 @@ __author__ = "Chase Hult"
 
 from exceptions import GOIFError, GOIFException
 from parser_pyp import cfg_asgn_stmt, cfg_asgn_stmt_eval, cfg_code, cfg_expr_var, cfg_go_stmt, cfg_goif_stmt, \
-    cfg_jump_stmt, \
-    cfg_line_id, cfg_ret_stmt, cfg_str, \
-    cfg_throw_stmt, cfg_unset_var
+    cfg_jump_stmt, cfg_line_id, cfg_ret_stmt, cfg_str, cfg_throw_stmt, cfg_unset_var
 
 
 class Frame(NamedTuple):
@@ -50,8 +48,8 @@ class GOIF:
             fname, lid = pr[0]
             if fname is not None:
                 if fname not in self.files[self.cur_file]:
-                    raise GOIFError(f"Invalid file on line {ln} file {self.fid_to_str[self.cur_file]}:"
-                                    f" {fname}")
+                    raise GOIFError(f"Invalid file: '{fname}'."
+                                    f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
                 c_fid = self.files[self.cur_file][fname]
             else:
                 c_fid = self.cur_file
@@ -60,12 +58,8 @@ class GOIF:
                 return
 
             if lid not in self.labels[c_fid]:
-                if fname is not None:
-                    raise GOIFError(f"Invalid label on line {ln} file {self.fid_to_str[self.cur_file]}:"
-                                    f" {fname}:{lid}")
-                else:
-                    raise GOIFError(f"Invalid label on line {ln} file {self.fid_to_str[self.cur_file]}:"
-                                    f" {lid}")
+                raise GOIFError(f"Invalid label: '{fname + ':' if fname else ''}{lid}'."
+                                f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
 
         try:
             assert cfg_code.parse_string(code) is not None
@@ -90,8 +84,8 @@ class GOIF:
             try:
                 self.evaluate_statement(line)
             except GOIFError as e:
-                raise GOIFError(f"Issue on line {self.cur_ln} file {self.fid_to_str[self.cur_file]}."
-                                f" {e.msg}") from None
+                raise GOIFError(f"{e.msg}"
+                                f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})") from None
 
     def evaluate_input(self, line) -> None:
         line = self.preserve_strings(line)
@@ -100,8 +94,8 @@ class GOIF:
         try:
             self.evaluate_statement(line)
         except GOIFError as e:
-            raise GOIFError(f"Issue on line {self.cur_ln} file {self.fid_to_str[self.cur_file]}."
-                            f" {e.msg}") from None
+            raise GOIFError(f"{e.msg}"
+                            f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})") from None
         self._run()
 
     def evaluate_statement(self, line):
@@ -122,7 +116,8 @@ class GOIF:
             elif isinstance(tokens, ParseResults):
                 label, expr = tokens
                 if not isinstance(expr, bool):
-                    raise GOIFError(f"GOIF expression does not evaluate to bool on line {self.cur_ln}")
+                    raise GOIFError(f"GOIF expression does not evaluate to bool."
+                                    f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
 
                 if expr:
                     self.cur_file, self.cur_ln = self.label_to_ln(label)
@@ -154,7 +149,8 @@ class GOIF:
                 self.set_variable(var, expr)
                 self.cur_ln += 1
         else:
-            raise GOIFError(f"Invalid statement: {repr(line)}")
+            raise GOIFError(f"Invalid statement: '{repr(line)}'."
+                            f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
 
         if isinstance(tokens, GOIFException):
             exc = tokens
@@ -174,15 +170,17 @@ class GOIF:
             return file, self.cur_ln + int(line_id[1:])
         if line_id in self.labels[file]:
             return file, self.labels[file][line_id]
-        raise ValueError(f"Invalid label '{line_id}' on line {self.cur_ln}.")
+        raise ValueError(f"Invalid label '{line_id}'."
+                         f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
 
     def set_variable(self, var: str, value: Any) -> None:
         if var == "STDERR":
             sys.stderr.write(str(value))
         elif var == "STDOUT":
             sys.stdout.write(str(value))
-        elif var in ("STDIN"):
-            raise GOIFError(f"You cannot read from {var}. (ln {self.cur_ln})")
+        elif var in ("STDIN",):
+            raise GOIFError(f"You cannot read from {var}."
+                            f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
         else:
             self.vars[var] = value
 
@@ -191,10 +189,12 @@ class GOIF:
         if var == "STDIN":
             return input()
         elif var in ("STDOUT", "STDERR"):
-            raise GOIFError(f"You cannot write to {var}. (ln {self.cur_ln})")
+            raise GOIFError(f"You cannot write to {var}."
+                            f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
         elif var in self.vars:
             return self.vars[var]
-        raise GOIFError(f"Unknown variable {var} on line {self.cur_ln}")
+        raise GOIFError(f"Unknown variable {var}."
+                        f" (ln {self.cur_ln} fl {self.fid_to_str[self.cur_file]})")
 
     def push_frame(self, args: List, handlers: List[ParseResults]) -> None:
         handlers = {exc: self.label_to_ln(ln) for exc, ln in handlers}
@@ -295,9 +295,10 @@ class GOIF:
                 if line.endswith(':'):
                     label = line[:-1]
                     if label in f_labels:
-                        raise GOIFError(f"Label '{label}' appeared at least twice (lines {f_labels[label]} and {ln})")
+                        raise GOIFError(f"Label '{label}' appeared at least twice in file {self.fid_to_str[fid]}"
+                                        f" (lines {f_labels[label]} and {ln})")
                     if not re.fullmatch(r'[\w.]+', label):
-                        raise GOIFError(f"Invalid label name: '{label}'")
+                        raise GOIFError(f"Invalid label name in file {self.fid_to_str[idx]}: '{label}'")
                     f_labels[label] = ln
                     continue
                 if line:
@@ -306,7 +307,6 @@ class GOIF:
             f_labels.setdefault('MAIN', 1)
             self.lines[fid] = f_lines
             self.labels[fid] = f_labels
-
 
         for fid, code in codes.items():
             self.cur_file = fid

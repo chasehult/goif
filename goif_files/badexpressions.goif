@@ -4,9 +4,11 @@
 %%%
 
 
-% This code will compile!  Expressions aren't checked compiletime!
+% This code will compile!  Expressions aren't checked compiletime, as variables can be any type!
+% Given how often variables like arg and ret variables are reused with the same name but different
+%  types, it didn't make sense to add static typing to this language.  
 
-"abc" + "def" INTO whatever  % This will fail!  You need to use ^ for concatenation.
+"abc" + "def" INTO whatever  % This will fail at runtime!  You need to use ^ for concatenation.
 
 % Every single operator has specific types that are checked
 
@@ -32,7 +34,7 @@
 
 % I can't actually think of any other code here.
 
-% OH! Files.  Not quite expression related but close enough?
+% OH! Streams.  Not quite expression related but close enough?
 
 STDOUT INTO var  % You cannot read from STDOUT or STDERR
 "whatever" INTO STDIN  % You cannot write to STDIN

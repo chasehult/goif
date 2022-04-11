@@ -9,6 +9,9 @@ SAME.NAME:  % This script won't even load.  This is very illegal.
 GO NON.EXISTANT  % This will also fail on compile.
 GOIF NON.EXISTANT TRUE  % This one too.
 
+GO STD:SAME.NAME  % This will also fail on compile.  It checks all labels across all files.
+FAKE_FILE:LABEL  % Obviously this one will fail too.  FAKE_FILE isn't loaded
+
 SPACES IN LABEL:  % Invalid label names also fail on compile
 
 GO ^-1  % This one actually isn't bad.  Negative line numbers are allowed.
@@ -20,6 +23,6 @@ GO INF.LOOP  % Also legal!  Infinite loop.
 
 
 SUBROUTINE:
- RETURN  % If the main is before the subroutine, it won't get skipped and the return will end the program.
+ RETURN  % If the main is before the subroutine, it won't get skipped and this return will end the program.
 
-GO SUBROUTINE  % This will do the same, though sometimes you might want to do this!
+GO SUBROUTINE  % This will do the same, though sometimes you might want to do this and not use a JUMP!

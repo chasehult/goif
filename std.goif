@@ -1,3 +1,8 @@
+%%%
+% std.goif
+% This is the standard library for the GOIF langauge.  It belongs in the same directory as goif.py.
+%%%
+
 LENGTH:
  %%%
  % This gives the length of a string.
