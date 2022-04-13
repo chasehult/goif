@@ -56,11 +56,11 @@ TO_NUM:
  
  JUMP LENGTH  % arg1 is already defined.  If we don't add parens, it grabs args from the namespace
  ret1 INTO length
+ GOIF ~2 arg1 != "" & arg1 != "-"  % Skip the next line if the arg isn't empty or "-"
+  THROW BAD_STR  % The input string was empty
  arg1 # 1 == "-" INTO neg
  neg ? 2 : 1 INTO idx
  0 INTO ret1
- GOIF ~2 length >= idx  % Skip the next line if the arg isn't empty
-  THROW BAD_STR  % The input string was empty
  TO_NUM.LOOP1:
   ret1 * 10 INTO ret1
   TO_NUM.LOOP1.COND1:  % This label is never actually used. It's just here to look nice.

@@ -202,8 +202,8 @@ class GOIF:
             return file, self.cur_ln + int(line_id[1:])
         if line_id in self.labels[file]:  # Line Label
             return file, self.labels[file][line_id]
-        raise ValueError(f"Invalid label '{line_id}'."
-                         + self.get_current_state())
+        raise GOIFCompileError(f"Invalid label '{line_id}'."
+                               + self.get_current_state())
 
     def set_variable(self, var: str, value: Any) -> None:
         """Set a GOIF variable to the current namespace.
@@ -297,8 +297,7 @@ class GOIF:
         cfg_expr_var.set_parse_action(self.get_variable)
         cfg_unset_var.set_parse_action(lambda pr: pr[0] not in self.vars)
 
-    @staticmethod
-    def try_match(cfg: ParserElement, string: str) -> Union[ParseResults, GOIFException, None]:
+    def try_match(self, cfg: ParserElement, string: str) -> Union[ParseResults, GOIFException, None]:
         """PyParsing raises an exception instead of just failing on an invalid parse.  This fixes that."""
         try:
             return cfg.parse_string(string, parse_all=True)
@@ -306,6 +305,8 @@ class GOIF:
             return e
         except ParseException:
             return None
+        except GOIFRuntimeError as e:
+            raise GOIFRuntimeError(e.msg + self.get_current_state())
 
     def compile(self, root: Optional[str]) -> int:
         """Compile a GOIF file.
