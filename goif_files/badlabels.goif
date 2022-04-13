@@ -19,7 +19,12 @@ GO ~0  % Technically allowed!  Infinite loop though.
 
 
 INF.LOOP:
-GO INF.LOOP  % Also legal!  Infinite loop.
+GO INF.LOOP  % Also legal!  Infinite loop though.
+
+% This is legal-ish, but it'll ERROR after 255 loops unless 
+%  unasfe_jump (the -j command line option) is enabled
+INF.JUMP:
+JUMP INF.JUMP 
 
 
 SUBROUTINE:

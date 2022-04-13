@@ -78,7 +78,7 @@ class GOIF:
             raise e from None
 
     def get_current_state(self) -> str:
-        return f" (line {self.cur_ln if self.cur_ln != float('inf') else 'N/A'}" \
+        return f" (line {self.cur_ln if self.cur_ln != float('inf') else 'N/A'}," \
                f" file '{self.fid_to_str[self.cur_file]}')"
 
     def run(self, *args) -> None:
@@ -280,14 +280,13 @@ class GOIF:
 
         This is called on some bad expressions or in an explicit THROW statement"""
         if exc == "ERROR":
-            raise GOIFRuntimeError("Critical ERROR raised.")
-        if not self.call_stack:
-            raise GOIFException(exc)
-        frame = self.call_stack.pop()
-        if exc in frame.handlers:
-            self.cur_file, self.cur_ln = frame.handlers[exc]
-        else:
-            self.throw_exc(exc)
+            raise GOIFRuntimeError("ERROR thrown." + self.get_current_state())
+        while self.call_stack:
+            frame = self.call_stack.pop()
+            if exc in frame.handlers:
+                self.cur_file, self.cur_ln = frame.handlers[exc]
+                return
+        raise GOIFException(exc + self.get_current_state())
 
     def setup(self, *args) -> None:
         """This resets everything to run a file again which is no longer supported due to ease of command line use."""

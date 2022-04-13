@@ -1,0 +1,8 @@
+L1:
+THROW ERROR
+
+L2:
+JUMP L1
+
+MAIN:
+JUMP L2
