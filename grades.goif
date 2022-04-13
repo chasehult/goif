@@ -27,7 +27,7 @@ GRADES:
   % iterate through numbers in the simulated list
   JUMP STD:LENGTH (arg1)
   ret1 INTO strlen
-  strlen INTO strlen
+  GOIF MAIN.INPUTLOOP.HANDLE3.NONUM strlen == 0
   arg1 INTO grades
   "" INTO grdstr
   
@@ -115,8 +115,9 @@ MAIN:
     "Only positive numbers may be entered.  Try again.\n" INTO STDOUT
     GO MAIN.INPUTLOOP
    
-
-
+   MAIN.INPUTLOOP.HANDLE3.NONUM:
+    "No numbers were entered. Try again.\n" INTO STDOUT
+    GO MAIN.INPUTLOOP
 
 
 
