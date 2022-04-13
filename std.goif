@@ -151,3 +151,28 @@ TO_STRING:
   GOIF ~2 arg1 == 0
    GO TO_STRING.LOOP
   RETURN (sign ^ ret1)
+
+SQRT:
+ %%%
+ % Calculate the integer square root of a number
+ %
+ % args:
+ % 1: NUMBER - The input integer
+ % 
+ % rets:
+ % 1: NUMBER - The square root of the input
+ %
+ % throws:
+ % NONREAL_ANSWER - If the input is negative
+ %%%
+ 
+ GOIF ~2 arg1 >= 0
+ THROW NONREAL_ANSWER
+ 
+ 0 INTO ret1
+ SQRT.LOOP:
+  GOIF SQRT.LOOP.END ret1 * ret1 > arg1
+  ret1+1 INTO ret1
+  GO SQRT.LOOP
+ SQRT.LOOP.END:
+ RETURN (ret1-1)

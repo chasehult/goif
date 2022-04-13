@@ -1,7 +1,8 @@
 from enum import Enum, auto
 
 from pyparsing import Char, Combine, Empty, Group, Keyword as _Keyword, LineEnd, Literal, OpAssoc, Opt, ParseResults, \
-    ParserElement, Regex, StringEnd, Suppress, White, Word, alphanums, alphas, common, delimited_list, infix_notation, \
+    ParserElement, Regex, SkipTo, StringEnd, Suppress, White, Word, alphanums, alphas, common, delimited_list, \
+    infix_notation, \
     nums, one_of
 
 from operator_exprs import operate
@@ -88,7 +89,7 @@ cfg_rel_ln = Combine('~' + Opt('-') + Word(nums))
 cfg_lbl_ln = Word(alphanums + '._')
 cfg_line_no = cfg_abs_ln | cfg_rel_ln | cfg_lbl_ln
 
-cfg_file_id = Word(alphanums + '_').add_condition(lambda pr: pr[0].upper() != "MAIN")
+cfg_file_id = Word(alphanums + '._').add_condition(lambda pr: pr[0].upper() != "MAIN")
 cfg_line_id = Group(Opt(cfg_file_id + Suppress(":")).set_parse_action(lambda pr: pr or [None]) + cfg_line_no)
 
 cfg_exception = Word(alphanums + '_')
@@ -114,7 +115,7 @@ cfg_var_eval.add_condition(not_keyword)
 cfg_unset_var_eval = Combine(Suppress('@') + cfg_var_eval)
 
 cfg_int_eval = common.signed_integer
-cfg_str_eval = Combine('"' + Word(nums) + '"')
+cfg_str_eval = Combine(Literal('"') + SkipTo('"', fail_on="\n") + '"')
 cfg_bool_eval = Literal("TRUE") | Literal("FALSE")
 
 cfg_expr_eval = infix_notation(
@@ -141,6 +142,8 @@ cfg_ret_stmt_eval = Keyword("RETURN") + cfg_exprs_eval
 cfg_line = Opt(Group(
     cfg_go_stmt | cfg_goif_stmt_eval | cfg_jump_stmt_eval | cfg_throw_stmt |
     cfg_ret_stmt_eval | cfg_label_stmt | cfg_into_stmt_eval | cfg_load_stmt)) + Opt(cfg_comment)
+
+# This can verify an ENTIRE thing of code.  If it doesn't match, your code is invalid.
 cfg_code = delimited_list(cfg_line, delim=LineEnd()) + StringEnd()
 
 
