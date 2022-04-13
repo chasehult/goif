@@ -77,9 +77,11 @@ class GOIF:
         except GOIFCompileError as e:
             raise e from None
 
-    def get_current_state(self) -> str:
-        return f" (line {self.cur_ln if self.cur_ln != float('inf') else 'N/A'}," \
-               f" file '{self.fid_to_str[self.cur_file]}')"
+    def get_current_state(self, cur_ln = None, cur_file = None) -> str:
+        cur_ln = cur_ln or self.cur_ln
+        cur_file = cur_file or self.cur_file
+        return f" (line {cur_ln if cur_ln != float('inf') else 'N/A'}," \
+               f" file '{self.fid_to_str[cur_file]}')"
 
     def run(self, *args) -> None:
         self.setup(*args)
@@ -281,12 +283,15 @@ class GOIF:
         This is called on some bad expressions or in an explicit THROW statement"""
         if exc == "ERROR":
             raise GOIFRuntimeError("ERROR thrown." + self.get_current_state())
+        jumps = ""
         while self.call_stack:
             frame = self.call_stack.pop()
+            jumps += f" from JUMP{self.get_current_state(frame.cur_ln, frame.cur_file)}"
             if exc in frame.handlers:
                 self.cur_file, self.cur_ln = frame.handlers[exc]
+                self.vars = frame.vars
                 return
-        raise GOIFException(exc + self.get_current_state())
+        raise GOIFException(exc + self.get_current_state() + jumps)
 
     def setup(self, *args) -> None:
         """This resets everything to run a file again which is no longer supported due to ease of command line use."""

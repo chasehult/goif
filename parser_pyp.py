@@ -145,7 +145,3 @@ cfg_line = Opt(Group(
 
 # This can verify an ENTIRE thing of code.  If it doesn't match, your code is invalid.
 cfg_code = delimited_list(cfg_line, delim=LineEnd()) + StringEnd()
-
-
-def normalize(x):
-    return [normalize(list(v)) if isinstance(v, (list, ParseResults)) else v for v in x]
