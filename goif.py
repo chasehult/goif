@@ -5,14 +5,13 @@ import re
 import sys
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
 
-from pyparsing import Empty, ParseException, ParseResults, ParserElement
+from pyparsing import ParseException, ParseResults, ParserElement
 
 __author__ = "Chase Hult"
 
 from exceptions import GOIFCompileError, GOIFException, GOIFRuntimeError
 from parser_pyp import SpecialValues, cfg_into_stmt, cfg_into_stmt_eval, cfg_code, cfg_expr_var, cfg_go_stmt, \
-    cfg_goif_stmt, \
-    cfg_jump_stmt, cfg_line_id, cfg_ret_stmt, cfg_str, cfg_throw_stmt, cfg_unset_var
+    cfg_goif_stmt, cfg_jump_stmt, cfg_line_id, cfg_ret_stmt, cfg_str, cfg_throw_stmt, cfg_unset_var
 
 
 class Frame(NamedTuple):
@@ -164,7 +163,11 @@ class GOIF:
             self.pop_frame(rets)
         elif self.try_match(cfg_into_stmt_eval, line):
             # INTO
-            tokens = self.try_match(cfg_into_stmt, line)
+            try:
+                tokens = self.try_match(cfg_into_stmt, line)
+            except GOIFRuntimeError as e:
+                raise GOIFRuntimeError(e.msg + self.get_current_state()) from None
+
             if isinstance(tokens, GOIFException):
                 exc = tokens
                 self.throw_exc(exc.name)
@@ -397,7 +400,7 @@ class GOIF:
         def replace_and_increment(match) -> str:
             nonlocal idx
             self.strs[idx] = match.group(1).replace('\\n', '\n').replace('\\t', '\t') \
-                .replace('\\"', '"').replace('\\b', '').replace('\\0', '\0')
+                .replace('\\"', '"').replace('\\0', '\0')
             idx += 1
             return f'"{idx - 1}"'
 
