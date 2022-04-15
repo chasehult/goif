@@ -1,0 +1,161 @@
+%%%
+% grades.goif
+%
+% This code takes in user input of grades and stores them as a simulated list until "DONE" is 
+% entered. It then calculates the mean, stadard deviation, highest grade, and lowest grade
+% of the entered grades.
+%%%
+
+GRADES:
+ %%%
+ % args:
+ % 1: String - a '#' delimited string of grades that ends with a # (e.g. "100#85#90#70#")
+ %
+ % returns:
+ % prints to STDOUT mean, stadard deviation, highest grade, and lowest grade
+ %%%
+
+ CALC:
+  1 INTO index
+  0 INTO count
+  0 INTO sum
+  0 INTO sumsqrs
+  -1 INTO mean
+  9999 INTO min
+  0 INTO max
+
+  % iterate through numbers in the simulated list
+  JUMP STD:LENGTH (arg1)
+  ret1 INTO strlen
+  GOIF MAIN.INPUTLOOP.HANDLE3.NONUM strlen == 0
+  arg1 INTO grades
+  "" INTO grdstr
+  
+  ITERATE:
+    grades # index INTO char
+   GOIF ITERATE.NEXTNUM char == "#"  % '#' signifies end of number
+    grdstr ^ char INTO grdstr  % add character to temporary string
+    index + 1 INTO index  % incremement index
+    GO ITERATE
+
+   ITERATE.NEXTNUM:
+    JUMP STD:TO_NUM (grdstr)
+    ret1 INTO arg1
+    GOIF ITERATE.SD.NEXTNUM mean > 0  % if the mean has already been set, then calculate the standard deviation
+     arg1 INTO grdint
+     count + 1 INTO count  % increment the grade counter
+     sum + grdint INTO sum  % add grade to running sum
+    GOIF ~2 grdint > min
+     grdint INTO min  % set new min grade
+    GOIF ~2 grdint < max
+     grdint INTO max  % set new max grade
+    GOIF ITERATE.END1 index == strlen
+     index + 1 INTO index  % incremement index
+     "" INTO grdstr  % reset grade string
+     GO ITERATE
+
+   ITERATE.SD.NEXTNUM:
+    % SD: mean -> deviation of each grade from mean(grade-mean) -> square each deviation -> sum of squares -> divide by count-1 -> take the sqrt
+    arg1 INTO grade
+    grade - mean INTO dev  % deviation of each grade from mean(grade-mean)
+    dev * dev INTO dev  % square each deviation
+    sumsqrs + dev INTO sumsqrs  % sum of squares
+    GOIF ITERATE.END2 index == strlen
+     index + 1 INTO index  % incremement index
+     "" INTO grdstr  % reset grade string
+     GO ITERATE
+
+   ITERATE.END1:
+    % perform calculations
+    sum / count INTO mean
+    1 INTO index  % reset index
+    "" INTO grdstr  % reset grade string
+    GO ITERATE
+
+   ITERATE.END2:
+    count - 1 INTO divisor  % divide by count-1
+    sumsqrs / divisor INTO quotient
+    JUMP STD:SQRT (quotient)  % take the sqrt
+    ret1 INTO sd
+
+    % print everything
+    JUMP STD:TO_STRING (count)
+    ret1 ^ " grades were counted.\n" INTO STDOUT
+    JUMP STD:TO_STRING (min)
+    "The lowest score was " ^ ret1 ^ ".\n" INTO STDOUT
+    JUMP STD:TO_STRING (max)
+    "The highest score was " ^ ret1 ^ ".\n" INTO STDOUT
+    JUMP STD:TO_STRING (mean)
+    "The mean is " ^ ret1 ^ ".\n" INTO STDOUT
+    JUMP STD:TO_STRING (sd)
+    "The standard deviation is " ^ ret1 ^ ".\n" INTO STDOUT
+    RETURN
+
+MAIN:
+ GOIF ~3 @arg1  % Allow args to be passed in via command line or STDIN
+  GO CALC
+
+ "" INTO arg1
+
+  % get input
+  MAIN.INPUTLOOP:
+   "Enter a grade (enter \"DONE\" if no more grades): " INTO STDOUT
+   STDIN INTO input
+   GOIF CALC input == "DONE"  % jump to calculations if "done" is entered
+   JUMP STD:TO_NUM (input) HANDLE BAD_STR MAIN.INPUTLOOP.HANDLE1.BAD_STR
+    GOIF MAIN.INPUTLOOP.HANDLE2.POSONLY ret1 < 0
+    arg1 ^ input ^ "#" INTO arg1  % create a '#' delimited string to simulate a list
+    GO MAIN.INPUTLOOP
+
+   MAIN.INPUTLOOP.HANDLE1.BAD_STR:
+    "Invalid number.  Try again.\n" INTO STDOUT
+    GO MAIN.INPUTLOOP
+
+   MAIN.INPUTLOOP.HANDLE2.POSONLY:
+    "Only positive numbers may be entered.  Try again.\n" INTO STDOUT
+    GO MAIN.INPUTLOOP
+   
+   MAIN.INPUTLOOP.HANDLE3.NONUM:
+    "No numbers were entered. Try again.\n" INTO STDOUT
+    GO MAIN.INPUTLOOP
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

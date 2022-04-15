@@ -1,0 +1,21 @@
+% Whitespace is mostly unimportant and ignored in GOIF, however, there are a few places where it is needed 
+% and will cause exceptions if not used. This program explains a few of those cases.
+
+MAIN:
+ "This line is to show that this program attempted to run" INTO STDOUT
+ % GO, GOIF, and JUMP statements must all have some amount of whitespace between them and the label name
+ % for example:
+ % JUMP <labename>
+ % JUMP	<labelname>
+ % JUMP						<labelname>
+ % are all valid
+ %
+ % as opposed to:
+ % JUMP<labelname>
+ % which will throw a compile time exception
+
+ Jump JUMPTEST % is valid
+ jumpJUMPTEST  % is invalid
+
+ JUMPTEST:
+ return
