@@ -4,6 +4,9 @@
 % This code takes in user input of grades and stores them as a simulated list until "DONE" is 
 % entered. It then calculates the mean, stadard deviation, highest grade, and lowest grade
 % of the entered grades.
+%
+% args:
+% 1 (Optional) - A "#" separated list of integers.  This must end with a #
 %%%
 
 GRADES:
@@ -41,7 +44,7 @@ GRADES:
    ITERATE.NEXTNUM:
     JUMP STD:TO_NUM (grdstr)
     ret1 INTO arg1
-    GOIF ITERATE.SD.NEXTNUM mean > 0  % if the mean has already been set, then calculate the standard deviation
+    GOIF ITERATE.SD.NEXTNUM mean >= 0  % if the mean has already been set, then calculate the standard deviation
      arg1 INTO grdint
      count + 1 INTO count  % increment the grade counter
      sum + grdint INTO sum  % add grade to running sum
@@ -74,8 +77,13 @@ GRADES:
 
    ITERATE.END2:
     count - 1 INTO divisor  % divide by count-1
-    sumsqrs / divisor INTO quotient
-    JUMP STD:SQRT (quotient)  % take the sqrt
+    GOIF ITERATE.END2.COND.ELSE divisor == 0
+     sumsqrs / divisor INTO quotient
+     JUMP STD:SQRT (quotient)  % take the sqrt
+     GO ITERATE.END2.COND.END
+    ITERATE.END2.COND.ELSE:
+     -1 INTO ret1
+    ITERATE.END2.COND.END:
     ret1 INTO sd
 
     % print everything
@@ -88,6 +96,7 @@ GRADES:
     JUMP STD:TO_STRING (mean)
     "The mean is " ^ ret1 ^ ".\n" INTO STDOUT
     JUMP STD:TO_STRING (sd)
+    ret1 == "-1" ? "undefined" : ret1 INTO ret1
     "The standard deviation is " ^ ret1 ^ ".\n" INTO STDOUT
     RETURN
 
