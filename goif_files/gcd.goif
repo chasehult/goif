@@ -2,6 +2,11 @@
 % gcd.goif
 % This code calculates the greatest common denominator of two user-inputted numbers.
 %
+% args:
+% 1 (Optional) - The first number
+% 2 (Optional) - The second number
+%
+% Notes:
 % This code is more basic than I expected because I wrote it before I wrote the language. The
 %  first version of this program had the standard library as part of it which made it much
 %  longer; therefore, this valid program is accompanied by the standard library at 

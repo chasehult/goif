@@ -131,7 +131,7 @@ ADD1:
  RETURN
 ADD1.END:
 
-% This label is meant to be used as a subroutine.  It can be imagined as a function.
+% This label is meant to be used as a subroutine.  It can be imagined as a function kind of!
 % There's nothing stopping us from GOing into it, but the RETURN in there would end the program.
 % There are two special argument names.  args and rets.  When a variable is in the form arg\d+, 
 %  it's an arg variable.  When it's in the form ret\d+, it's a ret variable. (\d+ means 1 or more numbers)
@@ -196,7 +196,9 @@ HANDLE1.OPFAIL:
  "3 is zero.\n" INTO STDOUT
 HANDLE1.END:
 
-% OP_FAIL is a special exception that's called when:
+% OP_FAIL is a special exception that's thrown when the types are right, but the expression
+%  cannot be evaluated for some other reason.
+% The three times this is thrown is:
 %  1. You divide by zero
 %  2. You modulo by zero
 %  3. Your string index is out of bounds
@@ -234,7 +236,7 @@ JUMP FILE_IDENTIFIER:PRINT.HI
 %  filesystem is set up so I can't show that here.  I promise it's possible though you can totally try it.  
 
 % This was built so we could have a standard library which is automatically loaded.
-% It has a few functions, and more might be added!  It's identifier is STD
+% It has a few subroutines, and more might be added!  It's identifier is STD
 JUMP STD:LENGTH ("12345678")
 JUMP STD:TO_STRING (ret1)
 "\"12345678\" is " ^ ret1 ^ " characters long!\n" INTO STDOUT
