@@ -13,3 +13,5 @@ The flags are:
  * `j`ump safety removal.  Normally, you can only go 255 layers deep to avoid infinite loops, but if you're working with complex or highly recursive code, you may want to enable this option to allow infinite depth.
 
 The args put in are stored into string variables named `arg#` where `#` is the 1-indexed position of the argument.
+
+[Go here for a presentation!](https://docs.google.com/presentation/d/1PUhvMERtS2f22pNhwZxlUyPDviWAzWFJ3uFCu5YOtfQ/edit?usp=sharing)
