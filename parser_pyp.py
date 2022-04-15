@@ -89,7 +89,7 @@ cfg_rel_ln = Combine('~' + Opt('-') + Word(nums))
 cfg_lbl_ln = Word(alphanums + '._')
 cfg_line_no = cfg_abs_ln | cfg_rel_ln | cfg_lbl_ln
 
-cfg_file_id = Word(alphanums + '._').add_condition(lambda pr: pr[0].upper() != "MAIN")
+cfg_file_id = Word(alphanums + '._')
 cfg_line_id = Group(Opt(cfg_file_id + Suppress(":")).set_parse_action(lambda pr: pr or [None]) + cfg_line_no)
 
 cfg_exception = Word(alphanums + '_')
@@ -99,7 +99,8 @@ cfg_handle_sbstmt = Keyword("HANDLE") + cfg_exception + cfg_ws + cfg_line_id
 cfg_goif_file = Word(alphanums + '_./')
 
 cfg_label_stmt = Combine(cfg_lbl_ln + ':')
-cfg_load_stmt = Keyword("LOAD") + cfg_goif_file + cfg_ws + cfg_file_id
+cfg_load_file_id = cfg_file_id.copy().add_condition(lambda pr: pr[0].upper() != "MAIN")
+cfg_load_stmt = Keyword("LOAD") + cfg_goif_file + cfg_ws + cfg_load_file_id
 cfg_go_stmt = Keyword("GO") + cfg_line_id
 cfg_goif_stmt = Keyword("GOIF") + cfg_line_id + cfg_ws + cfg_expr
 cfg_jump_stmt = Keyword("JUMP") + cfg_line_id + cfg_exprs + Group(cfg_handle_sbstmt)[...]

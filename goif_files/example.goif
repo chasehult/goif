@@ -114,7 +114,7 @@ LOOP1:
  GO LOOP1
 LOOP1.END:
 
-GO ADD1.END  % It'd be bad if we actually went into this region.
+GO ADD1.END  % It'd be bad if we actually went into this next region.
 % It has a return statement and that's deadly when we're not in a subroutine
 
 % Subroutines and JUMP statments and also RETURN statements (this section gets 2 statements)
@@ -238,6 +238,12 @@ JUMP FILE_IDENTIFIER:PRINT.HI
 JUMP STD:LENGTH ("12345678")
 JUMP STD:TO_STRING (ret1)
 "\"12345678\" is " ^ ret1 ^ " characters long!\n" INTO STDOUT
+
+% You can totally do that by the way, use escape characters for \n, \", \t (tab), and \0 (null byte)
+
+% The "current file" is MAIN, so you can refer to an existing line identifier with MAIN
+GO MAIN:GO.MAIN.LABEL
+GO.MAIN.LABEL:
 
 % Yoooo new feature!  This is going to be a long file.
 % If you remember, the @ operator is a special unary operator that takes in a variable and yeilds

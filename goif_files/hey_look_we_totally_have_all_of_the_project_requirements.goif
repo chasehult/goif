@@ -1,0 +1,132 @@
+%%%
+% hey_look_we_totally_have_all_of_the_project_requirements.goif
+% We forgot to include some things in our files, and we realized we had a cool tail call 
+%  functionality so we're showing that off here.
+%%%
+
+
+DECIDER:
+ %%%
+ % Turn 2 bools into a 2 bit number like a logical decider. It uses a nested conditional. 
+ % args:
+ % 1: BOOL - The first bit
+ % 2: BOOL - The first bit
+ %
+ % rets:
+ % 1: NUMBER - The 2 bit number.
+ %%%
+
+ GOIF DECIDER.COND1.ELSE arg1
+  GOIF DECIDER.COND1.COND1.ELSE arg2
+   RETURN (0)
+  DECIDER.COND1.COND1.ELSE:
+   RETURN (1)
+ DECIDER.COND1.ELSE:
+  GOIF DECIDER.COND1.COND2.ELSE arg2
+   RETURN (2)
+  DECIDER.COND1.COND2.ELSE:
+   RETURN (3)
+
+
+MULTIPLY:
+ %%%
+ % Get arg1 * arg2 using only incrementation.  This uses a nested loop.
+ % args:
+ % 1: NUMBER - The first number (Must be positive)
+ % 2: NUMBER - The first number (Must be positive)
+ %
+ % rets:
+ % 1: NUMBER - The result.
+ %
+ % throws:
+ % NEG_NUMBER: if either input is negative
+ %%%
+ GOIF ~2 arg1 >= 0 & arg2 >= 0
+  THROW NEG_NUMBER
+
+ 0 INTO ret1
+ 1 INTO i
+
+ MULTIPLY.LOOP1:
+  GOIF MULTIPLY.LOOP1.END i > arg1
+  1 INTO j
+  MULTIPLY.LOOP1.LOOP1:
+   GOIF MULTIPLY.LOOP1.LOOP1.END j > arg2
+   ret1 + 1 INTO ret1
+   j + 1 INTO j
+   GO MULTIPLY.LOOP1.LOOP1
+  MULTIPLY.LOOP1.LOOP1.END:
+  i + 1 INTO i
+  GO MULTIPLY.LOOP1
+ MULTIPLY.LOOP1.END:
+ RETURN
+
+
+FACTORIAL.NO.TAILCALL:
+ %%%
+ % This recursively takes the factorial of a number without a tail call.
+ %
+ % args:
+ % 1: NUMBER - the number to take the factorial of.
+ % 
+ % rets:
+ % 1: NUMBER - the factorial
+ %
+ % NOTES:
+ % This will not work with values over 255 without unsafe jump enabled.  It's also not space efficient
+ %  as the call stack will get very full.
+ %%%
+ GOIF ~2 arg1 > 1
+  RETURN (arg1)
+
+ JUMP FACTORIAL.NO.TAILCALL (arg1 - 1)
+ RETURN (arg1 * ret1)
+
+
+FACTORIAL.TAILCALL:
+ %%%
+ % This recursively takes the factorial of a number with a tail call.
+ % args:
+ % 1: NUMBER - the number to take the factorial of.
+ % 2: NUMBER (Optional) - A starting value defaulting to 1 to allow us to use a tail call.
+ %
+ % rets:
+ % 1: NUMBER - the factorial
+ %
+ % NOTES:
+ %  This works with arbitrarily large values! :)
+ %%%
+ GOIF ~2 !@arg2 
+  1 INTO arg2  % Initialize our second arg for the tail call to work.
+
+ arg2 * arg1 INTO arg2
+ GOIF ~2 arg1 > 1
+  RETURN (arg2)
+ 
+ arg1 - 1 INTO arg1
+ GO FACTORIAL.TAILCALL  % This is our tail call!!!
+
+
+MAIN:
+ JUMP DECIDER (TRUE, TRUE)
+ JUMP STD:TO_STRING (ret1)
+ "0b11 is " ^ ret1 ^ " in decimal!\n" INTO STDOUT
+
+ JUMP MULTIPLY (17, 12)
+ JUMP STD:TO_STRING (ret1)
+ "17 * 12 is " ^ ret1 ^ ".\n" INTO STDOUT
+
+ JUMP FACTORIAL.NO.TAILCALL (10)
+ JUMP STD:TO_STRING (ret1)
+ "10! is " ^ ret1 ^ ".\n" INTO STDOUT
+ 
+ % I'd include this section if this was a bad file, but this has to run.
+ % It won't run unless -j mode is on because it's recursive.  We're limited to 255 layers deep,
+ %  and this needs to go 300.
+ % JUMP FACTORIAL.NO.TAILCALL (300)
+ % JUMP STD:TO_STRING (ret1)
+ % "300! is " ^ ret1 ^ "!\n" INTO STDOUT
+
+ JUMP FACTORIAL.TAILCALL (300)
+ JUMP STD:TO_STRING (ret1)
+ "300! is " ^ ret1 ^ ".\n" INTO STDOUT

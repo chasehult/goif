@@ -1,0 +1,69 @@
+Note: This grammar is case insensitive, and spaces don't tend to matter very much
+Note: RETURN(1*3, 2) is valid but GOLABEL.NAME (meaning GO LABEL.NAME) is not.  
+Note: `` represents the empty string, and `|` represents the literal |
+
+<START> ::= <line>\n<START> | <line>
+
+<digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+<alpha> ::= a | b | c | d | e | f | g | h | i | j | k | l | m | n | o | p | q | r | s | t | u | v | w | x | y | z
+<alpha_> ::= <alpha> | _
+<word_char> ::= <alpha_> | <digit>
+<word_char.> ::= <word_char> | .
+<path_char> ::= <word_char.> | /  
+
+<word_chars> ::= <word_char><word_chars> | <word_char>
+<word_char.s> ::= <word_char.><word_char.s> | <word_char.>
+<path_chars> ::= <path_char><path_chars> | <path_char>
+<digits> ::= <digit><digits> | <digit>
+
+<str_contents> ::= (This is 0 or more characters and does not contain an unescaped double quote or a newline.  Making a CFG is hard without a finite defined language.  Unicode is valid in GOIF, so there's pretty much no way to write this out)
+<comment_contents> ::= (This is 0 or more characters and does not contain a newline.)
+
+<var_name> ::= <alpha_><word_chars> | <alpha_>
+<int> ::= <digits>
+<str> ::= "<str_contents>"
+<bool> ::= TRUE | FALSE
+
+Note: Typing rules are checked at runtime, so they're not relevant in the grammar.
+Note: The runtime typing rules are detailed in example.goif
+<expr1> ::= <var_name> | <int> | <str> | <bool> | STDIN | (<expr>) | @<var_name>
+<expr2> ::= -<expr2> | <expr1>
+<expr3> ::= <expr3> * <expr2> | <expr3> / <expr2> | <expr3> \ <expr2> | <expr2>
+<expr4> ::= <expr4> + <expr3> | <expr4> - <expr3> | <expr3>
+<expr5> ::= <expr5> # <expr4> | <expr4>
+<expr6> ::= <expr6> ^ <expr5> | <expr5>
+<expr7> ::= !<expr7> | <expr6>
+Note: Because of type mismatch, expr8 cannot be chained
+<expr8> ::= <expr7> < <expr7> | <expr7> <= <expr7> | <expr7> == <expr7> | <expr7> != <expr7> | <expr7> >= <expr7> | <expr7> > <expr7> | <expr7>
+<expr9> ::= <expr9> & <expr8> | <expr9> `|` <expr8> | <expr8>
+<expr> ::= <expr> ? <expr> : <expr> | <expr9>
+
+<exprs> ::= <expr>, <exprs> | <expr>
+
+<abs_ln> ::= ^<int> | ^-<int>
+<rel_ln> ::= ~<int> | ~-<int>
+<lbl_ln> ::= <word_char.s>
+<line_no> ::= <abs_ln> | <rel_ln> | <lbl_ln>
+<file_id> ::= <word_char.s>
+<line_id> ::= <file_id>:<line_no> | <line_no>
+
+<exception> ::= <word_char><word_chars>
+
+<file> ::= <path_chars>
+
+<label_stmt> ::= <lbl_ln>:
+<load_stmt> ::= LOAD <file> <file_id>
+<into_lhs> ::= <expr> | @
+<into_rhs> ::= <var_name> | STDERR | STDOUT
+<into_stmt> ::= <into_lhs> INTO <into_rhs>
+<go_stmt> ::= GO <line_id> 
+<goif_stmt> ::= GOIF <line_id> <expr>
+<handle_sbstmt> ::= HANDLE <exception> <line_id> <handle_sbstmt> | ``
+<jump_stmt> ::= JUMP <line_id> <handle_sbstmt> | JUMP <line_id> (<exprs>) <handle_sbstmt> 
+<throw_stmt> ::= THROW <exception>
+<ret_stmt> ::= RETURN | RETURN (<exprs>)
+
+<comment> ::= %<comment_contents>
+
+<stmt> ::= <into_stmt> | <go_stmt> | <goif_stmt> | <jump_stmt> | <throw_stmt> | <ret_stmt> | <label_stmt>
+<line> ::= <stmt> | <comment> | <stmt><comment>

@@ -29,11 +29,9 @@ class GOIF:
         self.vars: Dict[str, Union[bool, str, int]] = {}
         self.call_stack: List[Frame] = []
 
-        self.files: Dict[int, Dict[
-            str, int]] = {}  # Per-file file identifiers to file ids (ik identifier = id but i swear they're different)
+        self.files: Dict[int, Dict[str, int]] = {}  # Per-file file identifiers to file ids
         self.lines: Dict[int, Dict[int, str]] = {}  # Per-file line numbers to statements
         self.labels: Dict[int, Dict[str, int]] = {}  # Per-file line labels to line numbers
-
         self.strs: Dict[int, str] = {}  # Preserved strings
 
         self.debug = debug_mode
@@ -106,8 +104,7 @@ class GOIF:
             try:
                 self.evaluate_statement(line)
             except GOIFRuntimeError as e:
-                e.msg += self.get_current_state()
-                raise e from None
+                raise GOIFRuntimeError(e.msg + self.get_current_state()) from None
 
     def evaluate_input(self, line) -> None:
         line = self.preserve_strings(line)
@@ -184,7 +181,7 @@ class GOIF:
                 self.cur_ln += 1
         else:
             raise GOIFRuntimeError(f"Invalid statement: {repr(line)}."
-                                   + self.get_current_state())
+                                   + self.get_current_state()) from None
 
         if self.debug and isinstance(tokens, GOIFException):
             exc = tokens
@@ -311,7 +308,7 @@ class GOIF:
         except ParseException:
             return None
         except GOIFRuntimeError as e:
-            raise GOIFRuntimeError(e.msg + self.get_current_state())
+            raise GOIFRuntimeError(e.msg + self.get_current_state()) from None
 
     def compile(self, root: Optional[str]) -> int:
         """Compile a GOIF file.
@@ -440,7 +437,7 @@ class GOIF:
 
 if __name__ == "__main__":
     offset = 0
-    interactive = debug = unsafe_jump = False
+    interactive = debug = ujump = False
     if len(sys.argv) > 1 and sys.argv[1].startswith("-"):
         flags = sys.argv[1]
         offset = 1
@@ -449,20 +446,20 @@ if __name__ == "__main__":
         if 'd' in flags:
             debug = True
         if 'j' in flags:
-            unsafe_jump = True
+            ujump = True
 
     if not sys.argv[1 + offset:] and not interactive:
         print("Usage:\n goif.py [-dij] path/to/file.goif [arg ...]\n goif.py -i[dj]")
         exit(1)
 
     if not interactive:
-        goif_code = GOIF(sys.argv[1 + offset], debug_mode=debug, unsafe_jump=unsafe_jump)
+        goif_code = GOIF(sys.argv[1 + offset], debug_mode=debug, unsafe_jump=ujump)
         goif_code.run(*sys.argv[2 + offset:])
     else:
         if len(sys.argv) < 3:
-            goif_code = GOIF(None, debug_mode=debug, unsafe_jump=unsafe_jump)
+            goif_code = GOIF(None, debug_mode=debug, unsafe_jump=ujump)
         else:
-            goif_code = GOIF(sys.argv[1 + offset], debug_mode=debug, unsafe_jump=unsafe_jump)
+            goif_code = GOIF(sys.argv[1 + offset], debug_mode=debug, unsafe_jump=ujump)
         goif_code.setup(*sys.argv[2 + offset:])
         cur_line = ""
         while cur_line.upper() != "RETURN":
